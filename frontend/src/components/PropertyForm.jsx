@@ -10,23 +10,13 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
   });
 
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      zip: selectedZip || '',
-    }));
+    setFormData((prev) => ({ ...prev, zip: selectedZip || '' }));
   }, [selectedZip]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (name === 'zip') {
-      setSelectedZip(value);
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === 'zip') setSelectedZip(value);
   };
 
   const handleSubmit = (e) => {
@@ -35,118 +25,83 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '16px',
-        padding: '28px',
-        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-      }}
-    >
-      <h2
-        style={{
-          margin: 0,
-          fontSize: '26px',
-          fontWeight: '700',
-          color: '#111827',
-        }}
-      >
+    <div className="h-full bg-white rounded-2xl p-7 shadow-md box-border overflow-y-auto flex flex-col justify-center">
+      <h2 className="text-4xl font-bold text-gray-900 mb-3">
         Property Details
       </h2>
-
-      <p
-        style={{
-          marginTop: '8px',
-          marginBottom: '24px',
-          fontSize: '14px',
-          color: '#6b7280',
-        }}
-      >
+      <p className="mt-2 mb-6 text-md text-gray-500">
         Enter property characteristics to estimate market value.
       </p>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '18px',
-        }}
-      >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label style={labelStyle}>ZIP Code</label>
+          <label className="block mb-1.5 text-md font-semibold text-gray-800">
+            ZIP Code
+          </label>
           <input
             type="text"
             name="zip"
             value={formData.zip}
             onChange={handleChange}
             placeholder="Enter ZIP code"
-            style={inputStyle}
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
           />
         </div>
-
         <div>
-          <label style={labelStyle}>Bedrooms</label>
+          <label className="block mb-1.5 text-md font-semibold text-gray-800">
+            Bedrooms
+          </label>
           <input
             type="number"
             name="bedrooms"
             value={formData.bedrooms}
             onChange={handleChange}
             placeholder="e.g. 3"
-            style={inputStyle}
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
           />
         </div>
-
         <div>
-          <label style={labelStyle}>Bathrooms</label>
+          <label className="block mb-1.5 text-md font-semibold text-gray-800">
+            Bathrooms
+          </label>
           <input
             type="number"
             name="bathrooms"
             value={formData.bathrooms}
             onChange={handleChange}
             placeholder="e.g. 2"
-            style={inputStyle}
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
           />
         </div>
-
         <div>
-          <label style={labelStyle}>Square Footage</label>
+          <label className="block mb-1.5 text-md font-semibold text-gray-800">
+            Square Footage
+          </label>
           <input
             type="number"
             name="sqft"
             value={formData.sqft}
             onChange={handleChange}
             placeholder="e.g. 1800"
-            style={inputStyle}
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
           />
         </div>
-
         <div>
-          <label style={labelStyle}>Year Built</label>
+          <label className="block mb-1.5 text-md font-semibold text-gray-800">
+            Year Built
+          </label>
           <input
             type="number"
             name="yearBuilt"
             value={formData.yearBuilt}
             onChange={handleChange}
             placeholder="e.g. 2015"
-            style={inputStyle}
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
           />
         </div>
-
         <button
           type="submit"
-          style={{
-            padding: '14px',
-            backgroundColor: '#16a34a',
-            color: 'white',
-            border: 'none',
-            borderRadius: '10px',
-            fontSize: '16px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            marginTop: '10px',
-            boxShadow: '0 2px 8px rgba(22,163,74,0.25)',
-          }}
+          className="mt-2 py-3.5 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-base font-bold rounded-xl shadow-md shadow-green-200 transition-colors cursor-pointer"
         >
           Analyze Property
         </button>
@@ -154,21 +109,3 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     </div>
   );
 }
-
-const labelStyle = {
-  display: 'block',
-  marginBottom: '6px',
-  fontSize: '14px',
-  fontWeight: '600',
-  color: '#111827',
-};
-
-const inputStyle = {
-  width: '100%',
-  padding: '12px 14px',
-  borderRadius: '10px',
-  border: '1px solid #d1d5db',
-  fontSize: '15px',
-  backgroundColor: '#ffffff',
-  outline: 'none',
-};

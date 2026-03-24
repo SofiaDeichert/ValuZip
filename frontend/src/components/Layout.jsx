@@ -1,6 +1,5 @@
 import Header from './Header';
 import Footer from './Footer';
-
 import useResetScroll from '../hooks/useResetScroll';
 
 const Layout = ({ children }) => {
@@ -9,7 +8,7 @@ const Layout = ({ children }) => {
   return (
     <div className="flex flex-col h-screen">
       <Header />
-      <main className="flex-1 overflow-hidden">{children}</main>
+      <main className="flex-1 overflow-hidden min-h-0 py-8">{children}</main>
       <Footer />
     </div>
   );

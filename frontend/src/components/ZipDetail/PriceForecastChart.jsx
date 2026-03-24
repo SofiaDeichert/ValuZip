@@ -89,11 +89,11 @@ export default function PriceForecastChart({
         name: xAxisLabel,
         nameLocation: 'middle',
         nameGap: 36,
-        nameTextStyle: { fontSize: 11, color: '#9ca3af', fontWeight: 500 },
+        nameTextStyle: { fontSize: 12, color: '#9ca3af', fontWeight: 500 },
         axisLine: { lineStyle: { color: '#e5e7eb' } },
         axisTick: { show: false },
         axisLabel: {
-          fontSize: 11,
+          fontSize: 12,
           color: '#9ca3af',
           interval: Math.max(0, Math.floor(allDates.length / 5) - 1),
         },
@@ -104,9 +104,9 @@ export default function PriceForecastChart({
         nameLocation: 'middle',
         nameGap: 56,
         nameRotate: 90,
-        nameTextStyle: { fontSize: 11, color: '#9ca3af', fontWeight: 500 },
+        nameTextStyle: { fontSize: 12, color: '#9ca3af', fontWeight: 500 },
         axisLabel: {
-          fontSize: 11,
+          fontSize: 12,
           color: '#9ca3af',
           formatter: yAxisFormatter,
         },
@@ -168,13 +168,13 @@ export default function PriceForecastChart({
 
   const toggleClass = (active) =>
     active
-      ? 'px-3 py-1 rounded-full text-xs font-semibold bg-gray-900 text-white'
-      : 'px-3 py-1 rounded-full text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors';
+      ? 'px-3 py-1 rounded-full text-sm font-semibold bg-gray-900 text-white'
+      : 'px-3 py-1 rounded-full text-sm font-semibold text-gray-400 hover:text-gray-700 transition-colors';
 
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-gray-400 font-medium">
+        <span className="text-md text-gray-400 font-medium">
           Forecast horizon
         </span>
         <div className="flex items-center gap-1 bg-gray-100 rounded-full p-0.5">
@@ -193,7 +193,7 @@ export default function PriceForecastChart({
       <div className="flex items-center gap-4 mb-2">
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-0.5 rounded" style={{ background: color }} />
-          <span className="text-xs text-gray-400">Actual</span>
+          <span className="text-sm text-gray-400">Actual</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div
@@ -203,7 +203,7 @@ export default function PriceForecastChart({
               opacity: 0.65,
             }}
           />
-          <span className="text-xs text-gray-400">Predicted</span>
+          <span className="text-sm text-gray-400">Predicted</span>
         </div>
       </div>
 

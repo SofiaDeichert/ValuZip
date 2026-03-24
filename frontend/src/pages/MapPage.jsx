@@ -7,73 +7,29 @@ const MapPage = () => {
   const [selectedZip, setSelectedZip] = useState('');
 
   return (
-    <div
-      style={{
-        width: '100%',
-        minHeight: '100vh',
-        backgroundColor: '#f3f4f6',
-      }}
-    >
-      {/* ── Top bar: page title + ZIP search ── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '20px 24px 0 24px',
-        }}
-      >
-        <div>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 20,
-              fontWeight: 700,
-              color: '#111827',
-            }}
-          >
-            Dallas Property Map
-          </h2>
-          <p style={{ margin: '4px 0 0 0', fontSize: 13, color: '#6b7280' }}>
-            Click a ZIP on the map or search to view neighborhood stats.
-          </p>
-        </div>
-
-        <ZipSelect style={{ width: 220 }} />
-      </div>
-
-      {/* ── Form + Map ── */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '24px',
-          padding: '20px 24px 24px 24px',
-        }}
-      >
-        <div
-          style={{
-            width: '360px',
-            flexShrink: 0,
-          }}
-        >
+    <div className="h-full flex flex-col overflow-hidden bg-gray-100 px-8 sm:px-12 lg:px-20 xl:px-28 2xl:px-36 pt-6 pb-6 gap-4">
+      <div className="flex flex-1 min-h-0 gap-5 items-stretch">
+        <div className="hidden md:block w-1/4 flex-shrink-0">
           <PropertyForm
             selectedZip={selectedZip}
             setSelectedZip={setSelectedZip}
           />
         </div>
 
-        <div
-          style={{
-            flex: 1,
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-            overflow: 'hidden',
-            minHeight: '700px',
-          }}
-        >
+        {/* Map container — relative so the overlay sits inside it */}
+        <div className="flex-1 min-w-0 rounded-2xl shadow-md overflow-hidden bg-white relative">
           <MapView selectedZip={selectedZip} />
+          <div className="absolute top-3 right-3 z-10">
+            <ZipSelect style={{ width: 220 }} />
+          </div>
         </div>
+      </div>
+
+      <div className="md:hidden flex-shrink-0">
+        <PropertyForm
+          selectedZip={selectedZip}
+          setSelectedZip={setSelectedZip}
+        />
       </div>
     </div>
   );
