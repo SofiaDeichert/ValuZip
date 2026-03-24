@@ -18,7 +18,9 @@ export default function PriceForecastChart({
 
   useEffect(() => {
     if (!chartRef.current) return;
-    instanceRef.current = echarts.init(chartRef.current, null, { renderer: 'svg' });
+    instanceRef.current = echarts.init(chartRef.current, null, {
+      renderer: 'svg',
+    });
     return () => instanceRef.current?.dispose();
   }, []);
 
@@ -29,6 +31,8 @@ export default function PriceForecastChart({
     const historicalDates = historicalData.map((d) => d.date);
     const forecastDates = slicedForecast.map((d) => d.date);
     const allDates = [...historicalDates, ...forecastDates];
+
+    const bridgeIndex = historicalDates.length - 1;
 
     // Actual series: real vals for historical slots, null for forecasted
     const actualData = [
@@ -48,7 +52,7 @@ export default function PriceForecastChart({
       grid: {
         top: 24,
         right: 24,
-        bottom: 56,  // extra room for x-axis label
+        bottom: 56,
         left: 48,
         containLabel: true,
       },
@@ -59,7 +63,13 @@ export default function PriceForecastChart({
         borderWidth: 1,
         textStyle: { color: '#111827', fontSize: 12, fontFamily: 'inherit' },
         formatter(params) {
-          const visible = params.filter((p) => p.value != null);
+          const visible = params.filter((p) => {
+            if (p.value == null) return false;
+            // Hide "Actual" at the bridge point so only Predicted shows
+            if (p.seriesName === 'Predicted' && p.dataIndex === bridgeIndex)
+              return false;
+            return true;
+          });
           if (!visible.length) return '';
           const rows = visible.map((p) => {
             const opacity = p.seriesName === 'Predicted' ? '0.6' : '1';
@@ -98,7 +108,7 @@ export default function PriceForecastChart({
         axisLabel: {
           fontSize: 11,
           color: '#9ca3af',
-          formatter: yAxisFormatter,   // custom tick format
+          formatter: yAxisFormatter,
         },
         splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
         axisLine: { show: false },
@@ -139,7 +149,16 @@ export default function PriceForecastChart({
     };
 
     instanceRef.current.setOption(option, true);
-  }, [historicalData, forecastData, horizon, color, yAxisFormatter, fmtTooltip, xAxisLabel, yAxisLabel]);
+  }, [
+    historicalData,
+    forecastData,
+    horizon,
+    color,
+    yAxisFormatter,
+    fmtTooltip,
+    xAxisLabel,
+    yAxisLabel,
+  ]);
 
   useEffect(() => {
     const ro = new ResizeObserver(() => instanceRef.current?.resize());
@@ -155,10 +174,16 @@ export default function PriceForecastChart({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-gray-400 font-medium">Forecast horizon</span>
+        <span className="text-xs text-gray-400 font-medium">
+          Forecast horizon
+        </span>
         <div className="flex items-center gap-1 bg-gray-100 rounded-full p-0.5">
           {[3, 6, 12].map((h) => (
-            <button key={h} onClick={() => setHorizon(h)} className={toggleClass(horizon === h)}>
+            <button
+              key={h}
+              onClick={() => setHorizon(h)}
+              className={toggleClass(horizon === h)}
+            >
               {h}mo
             </button>
           ))}

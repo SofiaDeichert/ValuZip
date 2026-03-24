@@ -1,18 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 
 export default function PropertyForm({ selectedZip, setSelectedZip }) {
   const [formData, setFormData] = useState({
-    zip: selectedZip || "",
-    bedrooms: "",
-    bathrooms: "",
-    sqft: "",
-    yearBuilt: "",
+    zip: selectedZip || '',
+    bedrooms: '',
+    bathrooms: '',
+    sqft: '',
+    yearBuilt: '',
   });
 
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      zip: selectedZip || "",
+      zip: selectedZip || '',
     }));
   }, [selectedZip]);
 
@@ -24,31 +24,31 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
       [name]: value,
     }));
 
-    if (name === "zip") {
+    if (name === 'zip') {
       setSelectedZip(value);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Property data submitted:", formData);
+    console.log('Property data submitted:', formData);
   };
 
   return (
     <div
       style={{
-        backgroundColor: "#ffffff",
-        borderRadius: "16px",
-        padding: "28px",
-        boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+        backgroundColor: '#ffffff',
+        borderRadius: '16px',
+        padding: '28px',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
       }}
     >
       <h2
         style={{
           margin: 0,
-          fontSize: "26px",
-          fontWeight: "700",
-          color: "#111827",
+          fontSize: '26px',
+          fontWeight: '700',
+          color: '#111827',
         }}
       >
         Property Details
@@ -56,10 +56,10 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
 
       <p
         style={{
-          marginTop: "8px",
-          marginBottom: "24px",
-          fontSize: "14px",
-          color: "#6b7280",
+          marginTop: '8px',
+          marginBottom: '24px',
+          fontSize: '14px',
+          color: '#6b7280',
         }}
       >
         Enter property characteristics to estimate market value.
@@ -68,9 +68,9 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
       <form
         onSubmit={handleSubmit}
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "18px",
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
         }}
       >
         <div>
@@ -136,16 +136,16 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
         <button
           type="submit"
           style={{
-            padding: "14px",
-            backgroundColor: "#16a34a",
-            color: "white",
-            border: "none",
-            borderRadius: "10px",
-            fontSize: "16px",
-            fontWeight: "700",
-            cursor: "pointer",
-            marginTop: "10px",
-            boxShadow: "0 2px 8px rgba(22,163,74,0.25)",
+            padding: '14px',
+            backgroundColor: '#16a34a',
+            color: 'white',
+            border: 'none',
+            borderRadius: '10px',
+            fontSize: '16px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            marginTop: '10px',
+            boxShadow: '0 2px 8px rgba(22,163,74,0.25)',
           }}
         >
           Analyze Property
@@ -156,19 +156,19 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
 }
 
 const labelStyle = {
-  display: "block",
-  marginBottom: "6px",
-  fontSize: "14px",
-  fontWeight: "600",
-  color: "#111827",
+  display: 'block',
+  marginBottom: '6px',
+  fontSize: '14px',
+  fontWeight: '600',
+  color: '#111827',
 };
 
 const inputStyle = {
-  width: "100%",
-  padding: "12px 14px",
-  borderRadius: "10px",
-  border: "1px solid #d1d5db",
-  fontSize: "15px",
-  backgroundColor: "#ffffff",
-  outline: "none",
+  width: '100%',
+  padding: '12px 14px',
+  borderRadius: '10px',
+  border: '1px solid #d1d5db',
+  fontSize: '15px',
+  backgroundColor: '#ffffff',
+  outline: 'none',
 };
