@@ -116,6 +116,18 @@ export default function ZipDetailPage() {
   }, [activeChartModal]);
 
   useEffect(() => {
+    if (!activeChartModal) return;
+    if (typeof document === 'undefined') return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [activeChartModal]);
+
+  useEffect(() => {
     fetch(geojsonUrl)
       .then((r) => r.json())
       .then((data) => {
@@ -299,6 +311,9 @@ export default function ZipDetailPage() {
               <div className="text-3xl font-bold text-gray-900 mb-1">
                 {formatPrice(MOCK_STATS.medianHomePrice)}
               </div>
+              <div className="mt-1 text-sm text-gray-600">
+                12-month forecast shows steady upward movement
+              </div>
               <div className="text-sm text-gray-400 mb-5">
                 Last updated: {MOCK_STATS.lastUpdated}
               </div>
@@ -358,6 +373,9 @@ export default function ZipDetailPage() {
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">
                 ${MOCK_STATS.avgPricePerSqft}
+              </div>
+              <div className="mt-1 text-sm text-gray-600">
+                Price per sq ft is expected to trend upward
               </div>
               <div className="text-xs text-gray-400 mb-5">
                 Last updated: {MOCK_STATS.lastUpdated}
