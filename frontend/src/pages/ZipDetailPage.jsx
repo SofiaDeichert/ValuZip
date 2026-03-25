@@ -102,6 +102,18 @@ export default function ZipDetailPage() {
   const [viewState, setViewState] = useState(null);
   const [zipFeature, setZipFeature] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [activeChartModal, setActiveChartModal] = useState(null); // 'homePrice' | 'avgSqft' | null
+
+  useEffect(() => {
+    if (!activeChartModal) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setActiveChartModal(null);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeChartModal]);
 
   useEffect(() => {
     fetch(geojsonUrl)
@@ -126,6 +138,13 @@ export default function ZipDetailPage() {
   const markerCenter = zipFeature
     ? centroid(zipFeature).geometry.coordinates
     : null;
+
+  const modalTitle =
+    activeChartModal === 'homePrice'
+      ? 'Median Home Price'
+      : activeChartModal === 'avgSqft'
+        ? 'Avg. Price / Sq Ft'
+        : '';
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-gray-50 px-8 sm:px-12 lg:px-20 xl:px-28 2xl:px-36 pt-6 pb-6 gap-5">
@@ -233,18 +252,28 @@ export default function ZipDetailPage() {
         </div>
 
         {/* RIGHT: single card panel*/}
-        <div className="flex-1 lg:flex-none lg:w-1/3 h-full bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden flex flex-col justify-center">
+        <div className="flex-1 lg:flex-none lg:w-1/3 h-full bg-white rounded-2xl shadow-md border border-gray-100 overflow-y-auto min-h-0 flex flex-col justify-start">
           <div className="px-6 py-6 flex flex-col gap-5">
             <div className="pl-3">
-              <h2 className="text-4xl font-bold text-gray-800 mb-2">
-                ZIP Code Stats
-              </h2>
+              
               <p className="text-lg text-gray-400">
                 ZIP Code {zip} · Dallas, TX
               </p>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+            <div
+              className="bg-gray-50 rounded-xl p-5 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+              role="button"
+              tabIndex={0}
+              onClick={() => setActiveChartModal('homePrice')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveChartModal('homePrice');
+                }
+              }}
+              aria-label="Open median home price chart in modal"
+            >
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -277,7 +306,19 @@ export default function ZipDetailPage() {
               />
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+            <div
+              className="bg-gray-50 rounded-xl p-5 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+              role="button"
+              tabIndex={0}
+              onClick={() => setActiveChartModal('avgSqft')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveChartModal('avgSqft');
+                }
+              }}
+              aria-label="Open average price per square foot chart in modal"
+            >
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -321,6 +362,76 @@ export default function ZipDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Modal overlay */}
+        {activeChartModal && (
+          <div
+            className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-6"
+            onMouseDown={(e) => {
+              // Close only when the overlay itself is clicked.
+              if (e.target === e.currentTarget) setActiveChartModal(null);
+            }}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${modalTitle} chart modal`}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 leading-tight">{modalTitle}</h3>
+                  <p className="text-sm text-gray-500">
+                    ZIP Code {zip} · Dallas, TX · Last updated {MOCK_STATS.lastUpdated}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                  onClick={() => setActiveChartModal(null)}
+                  aria-label="Close modal"
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                    <path
+                      d="M4.5 4.5L13.5 13.5M13.5 4.5L4.5 13.5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto">
+                <div className="w-full">
+                  {activeChartModal === 'homePrice' && (
+                    <PriceForecastChart
+                      historicalData={HOME_PRICE_HISTORICAL}
+                      forecastData={HOME_PRICE_FORECAST}
+                      color="#16a34a"
+                      xAxisLabel="Date"
+                      yAxisLabel="Price (USD)"
+                      yAxisFormatter={homePriceTickFmt}
+                      tooltipFormatter={homePriceTooltipFmt}
+                    />
+                  )}
+                  {activeChartModal === 'avgSqft' && (
+                    <PriceForecastChart
+                      historicalData={SQFT_HISTORICAL}
+                      forecastData={SQFT_FORECAST}
+                      color="#2563eb"
+                      xAxisLabel="Date"
+                      yAxisLabel="USD / sq ft"
+                      yAxisFormatter={sqftTickFmt}
+                      tooltipFormatter={sqftTooltipFmt}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
