@@ -5,7 +5,7 @@ export default function PriceForecastChart({
   historicalData = [],
   forecastData = [],
   color = '#006400',
-  lightColor = '#1a7a1a',
+  lightColor = '#006400',
   xAxisLabel = 'Date',
   yAxisLabel = '',
   yAxisFormatter = (v) => `${v}`,

@@ -318,7 +318,6 @@ export default function ZipDetailPage() {
                 historicalData={HOME_PRICE_HISTORICAL}
                 forecastData={HOME_PRICE_FORECAST}
                 color="#006400"
-                lightColor="#1a7a1a"
                 xAxisLabel="Date"
                 yAxisLabel="Price (USD)"
                 yAxisFormatter={homePriceTickFmt}
@@ -438,7 +437,6 @@ export default function ZipDetailPage() {
                       historicalData={HOME_PRICE_HISTORICAL}
                       forecastData={HOME_PRICE_FORECAST}
                       color="#006400"
-                      lightColor="#1a7a1a"
                       xAxisLabel="Date"
                       yAxisLabel="Price (USD)"
                       yAxisFormatter={homePriceTickFmt}

@@ -101,7 +101,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
         </div>
         <button
           type="submit"
-          className="w-full bg-[#006400] hover:bg-[#004d00] text-white font-semibold py-3 rounded-xl transition"
+          className="w-full relative overflow-hidden rounded-xl bg-[#006400] text-white font-semibold py-3 transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
         >
           Analyze Property
         </button>
