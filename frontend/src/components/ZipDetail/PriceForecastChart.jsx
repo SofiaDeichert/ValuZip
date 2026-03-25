@@ -66,7 +66,7 @@ export default function PriceForecastChart({
           const visible = params.filter((p) => {
             if (p.value == null) return false;
             // Hide "Actual" at the bridge point so only Predicted shows
-            if (p.seriesName === 'Predicted' && p.dataIndex === bridgeIndex)
+            if (p.seriesName === 'Actual' && p.dataIndex === bridgeIndex)
               return false;
             return true;
           });
