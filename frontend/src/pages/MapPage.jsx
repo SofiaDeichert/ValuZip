@@ -10,8 +10,8 @@ const MapPage = () => {
     <div className="h-full min-h-0 flex flex-col overflow-hidden bg-gray-100">
       <div className="flex-1 min-h-0 flex overflow-hidden bg-white border-y border-gray-200">
         {/* Docked sidebar (desktop) */}
-        <aside className="hidden md:flex w-[380px] lg:w-[400px] flex-shrink-0 min-h-0 flex-col bg-white border-r border-gray-200 overflow-y-auto">
-          <div className="p-6">
+        <aside className="hidden md:flex w-[35%] flex-shrink-0 min-h-0 flex-col bg-white border-r border-gray-200 overflow-y-auto p-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <PropertyForm
               selectedZip={selectedZip}
               setSelectedZip={setSelectedZip}

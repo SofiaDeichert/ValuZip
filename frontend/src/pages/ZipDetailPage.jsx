@@ -162,7 +162,7 @@ export default function ZipDetailPage() {
     <div className="h-full min-h-0 flex flex-col overflow-hidden bg-gray-100">
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden bg-white border-y border-gray-200">
         {/* LEFT: map surface (full-canvas), relative so overlays position inside it */}
-        <div className="flex-1 min-w-0 min-h-0 relative overflow-hidden bg-white">
+        <div className="w-full lg:w-[65%] min-w-0 min-h-0 relative overflow-hidden bg-white">
           {viewState && (
             <Map
               {...viewState}
@@ -264,8 +264,8 @@ export default function ZipDetailPage() {
         </div>
 
         {/* RIGHT: docked sidebar */}
-        <aside className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 min-h-0 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 overflow-y-auto">
-          <div className="px-6 py-6 flex flex-col gap-5 min-h-0">
+        <aside className="w-full lg:w-[35%] flex-shrink-0 min-h-0 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 overflow-y-auto p-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col gap-5 min-h-0">
             <div>
               <p className="text-2xl font-bold text-gray-900 mt-0 mb-0">
                 {zip} · Dallas, TX
