@@ -268,9 +268,10 @@ export default function ZipDetailPage() {
           <div className="px-6 py-6 flex flex-col gap-5">
             <div className="pl-3">
               
-            <p className="text-2xl font-bold text-gray-900 mt-2 mb-3">
+            <p className="text-2xl font-bold text-gray-900 mt-2 mb-0">
   {zip} · Dallas, TX
 </p>
+
                 
               
             </div>
