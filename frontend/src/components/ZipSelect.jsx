@@ -88,12 +88,12 @@ export default function ZipSelect({ currentZip, className = '', style = {} }) {
           alignItems: 'center',
           gap: 8,
           backgroundColor: '#ffffff',
-          border: open ? '1.5px solid #16a34a' : '1.5px solid #d1d5db',
+          border: open ? '1.5px solid #006400' : '1.5px solid #d1d5db',
           borderRadius: 10,
           padding: '0 12px',
           height: 40,
           boxShadow: open
-            ? '0 0 0 3px rgba(22,163,74,0.13)'
+            ? '0 0 0 3px rgba(0,100,0,0.13)'
             : '0 1px 3px rgba(0,0,0,0.06)',
           transition: 'border 0.15s, box-shadow 0.15s',
           cursor: 'text',
@@ -111,7 +111,7 @@ export default function ZipSelect({ currentZip, className = '', style = {} }) {
           fill="none"
           style={{
             flexShrink: 0,
-            color: open ? '#16a34a' : '#9ca3af',
+            color: open ? '#006400' : '#9ca3af',
             transition: 'color 0.15s',
           }}
         >
@@ -226,8 +226,8 @@ export default function ZipSelect({ currentZip, className = '', style = {} }) {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       backgroundColor:
-                        isHovered || isCurrent ? '#f0fdf4' : 'transparent',
-                      color: isCurrent ? '#15803d' : '#111827',
+                        isHovered || isCurrent ? 'rgba(0,100,0,0.08)' : 'transparent',
+                      color: isCurrent ? '#006400' : '#111827',
                       transition: 'background 0.08s',
                     }}
                   >
@@ -237,8 +237,8 @@ export default function ZipSelect({ currentZip, className = '', style = {} }) {
                         style={{
                           fontSize: 10,
                           fontWeight: 700,
-                          color: '#16a34a',
-                          backgroundColor: '#dcfce7',
+                          color: '#006400',
+                          backgroundColor: 'rgba(0,100,0,0.14)',
                           borderRadius: 99,
                           padding: '2px 8px',
                           letterSpacing: '0.05em',

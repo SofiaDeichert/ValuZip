@@ -182,12 +182,12 @@ export default function ZipDetailPage() {
                   <Layer
                     id="zip-fill"
                     type="fill"
-                    paint={{ 'fill-color': '#16a34a', 'fill-opacity': 0.18 }}
+                    paint={{ 'fill-color': '#006400', 'fill-opacity': 0.18 }}
                   />
                   <Layer
                     id="zip-border"
                     type="line"
-                    paint={{ 'line-color': '#15803d', 'line-width': 2.5 }}
+                    paint={{ 'line-color': '#006400', 'line-width': 2.5 }}
                   />
                 </Source>
               )}
@@ -202,7 +202,7 @@ export default function ZipDetailPage() {
                       className="bg-white rounded-xl shadow-xl px-4 py-2.5 flex items-center gap-2.5 border border-gray-100"
                       style={{ minWidth: '130px' }}
                     >
-                      <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-[#006400]/10 flex items-center justify-center flex-shrink-0">
                         <svg
                           width="14"
                           height="14"
@@ -211,7 +211,7 @@ export default function ZipDetailPage() {
                         >
                           <path
                             d="M7 1C4.79 1 3 2.79 3 5C3 8 7 13 7 13C7 13 11 8 11 5C11 2.79 9.21 1 7 1ZM7 6.5C6.17 6.5 5.5 5.83 5.5 5C5.5 4.17 6.17 3.5 7 3.5C7.83 3.5 8.5 4.17 8.5 5C8.5 5.83 7.83 6.5 7 6.5Z"
-                            fill="#16a34a"
+                            fill="#006400"
                           />
                         </svg>
                       </div>
@@ -287,11 +287,11 @@ export default function ZipDetailPage() {
             >
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#006400]/8 flex items-center justify-center">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path
                         d="M1 6.5L8 1L15 6.5V15H10V10H6V15H1V6.5Z"
-                        stroke="#16a34a"
+                        stroke="#006400"
                         strokeWidth="1.5"
                         strokeLinejoin="round"
                       />
@@ -317,7 +317,8 @@ export default function ZipDetailPage() {
               <PriceForecastChart
                 historicalData={HOME_PRICE_HISTORICAL}
                 forecastData={HOME_PRICE_FORECAST}
-                color="#16a34a"
+                color="#006400"
+                lightColor="#1a7a1a"
                 xAxisLabel="Date"
                 yAxisLabel="Price (USD)"
                 yAxisFormatter={homePriceTickFmt}
@@ -436,7 +437,8 @@ export default function ZipDetailPage() {
                     <PriceForecastChart
                       historicalData={HOME_PRICE_HISTORICAL}
                       forecastData={HOME_PRICE_FORECAST}
-                      color="#16a34a"
+                      color="#006400"
+                      lightColor="#1a7a1a"
                       xAxisLabel="Date"
                       yAxisLabel="Price (USD)"
                       yAxisFormatter={homePriceTickFmt}

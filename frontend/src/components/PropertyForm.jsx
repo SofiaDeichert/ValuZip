@@ -44,7 +44,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
             value={formData.zip}
             onChange={handleChange}
             placeholder="Enter ZIP code"
-            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20 transition-all"
           />
         </div>
         <div>
@@ -57,7 +57,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
             value={formData.bedrooms}
             onChange={handleChange}
             placeholder="e.g. 3"
-            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20 transition-all"
           />
         </div>
         <div>
@@ -70,7 +70,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
             value={formData.bathrooms}
             onChange={handleChange}
             placeholder="e.g. 2"
-            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20 transition-all"
           />
         </div>
         <div>
@@ -83,7 +83,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
             value={formData.sqft}
             onChange={handleChange}
             placeholder="e.g. 1800"
-            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20 transition-all"
           />
         </div>
         <div>
@@ -96,12 +96,12 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
             value={formData.yearBuilt}
             onChange={handleChange}
             placeholder="e.g. 2015"
-            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
+            className="w-full px-3.5 py-3 rounded-xl border border-gray-300 text-sm bg-white outline-none focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20 transition-all"
           />
         </div>
         <button
           type="submit"
-          className="mt-2 py-3.5 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-base font-bold rounded-xl shadow-md shadow-green-200 transition-colors cursor-pointer"
+          className="w-full bg-[#006400] hover:bg-[#004d00] text-white font-semibold py-3 rounded-xl transition"
         >
           Analyze Property
         </button>

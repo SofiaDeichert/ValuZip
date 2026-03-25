@@ -4,7 +4,8 @@ import * as echarts from 'echarts';
 export default function PriceForecastChart({
   historicalData = [],
   forecastData = [],
-  color = '#16a34a',
+  color = '#006400',
+  lightColor = '#1a7a1a',
   xAxisLabel = 'Date',
   yAxisLabel = '',
   yAxisFormatter = (v) => `${v}`,
@@ -73,7 +74,8 @@ export default function PriceForecastChart({
           if (!visible.length) return '';
           const rows = visible.map((p) => {
             const opacity = p.seriesName === 'Predicted' ? '0.6' : '1';
-            const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};opacity:${opacity};margin-right:6px;"></span>`;
+            const dotColor = p.seriesName === 'Predicted' ? lightColor : color;
+            const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};opacity:${opacity};margin-right:6px;"></span>`;
             return `${dot}<b>${p.seriesName}</b>: ${fmtTooltip(p.value)}`;
           });
           return `<div style="font-size:12px;padding:2px 4px">
@@ -137,11 +139,11 @@ export default function PriceForecastChart({
           connectNulls: false,
           smooth: true,
           symbol: 'none',
-          lineStyle: { color, width: 2.5, type: 'dashed', opacity: 0.65 },
+          lineStyle: { color: lightColor, width: 2.5, type: 'dashed', opacity: 0.65 },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: color + '18' },
-              { offset: 1, color: color + '00' },
+              { offset: 0, color: lightColor + '18' },
+              { offset: 1, color: lightColor + '00' },
             ]),
           },
         },
@@ -154,6 +156,7 @@ export default function PriceForecastChart({
     forecastData,
     horizon,
     color,
+    lightColor,
     yAxisFormatter,
     fmtTooltip,
     xAxisLabel,
@@ -199,7 +202,7 @@ export default function PriceForecastChart({
           <div
             className="w-5 h-0.5"
             style={{
-              background: `repeating-linear-gradient(90deg,${color} 0,${color} 4px,transparent 4px,transparent 7px)`,
+              background: `repeating-linear-gradient(90deg,${lightColor} 0,${lightColor} 4px,transparent 4px,transparent 7px)`,
               opacity: 0.65,
             }}
           />
