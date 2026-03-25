@@ -7,8 +7,8 @@ const MapPage = () => {
   const [selectedZip, setSelectedZip] = useState('');
 
   return (
-    <div className="h-full min-h-0 flex flex-col overflow-hidden bg-gray-100 px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-      <div className="flex-1 min-h-0 flex overflow-hidden bg-white border border-gray-200 rounded-xl">
+    <div className="h-full min-h-0 flex flex-col overflow-hidden bg-gray-100">
+      <div className="flex-1 min-h-0 flex overflow-hidden bg-white border-y border-gray-200">
         {/* Docked sidebar (desktop) */}
         <aside className="hidden md:flex w-[380px] lg:w-[400px] flex-shrink-0 min-h-0 flex-col bg-white border-r border-gray-200 overflow-y-auto">
           <div className="p-6">
@@ -29,7 +29,7 @@ const MapPage = () => {
       </div>
 
       {/* Mobile: form docks as a clean section (no floating-card look) */}
-      <div className="md:hidden mt-3 bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="md:hidden bg-white border-t border-gray-200 overflow-hidden">
         <div className="p-5">
           <PropertyForm
             selectedZip={selectedZip}

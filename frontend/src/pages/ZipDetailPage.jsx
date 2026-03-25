@@ -159,10 +159,10 @@ export default function ZipDetailPage() {
         : '';
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-gray-50 px-8 sm:px-12 lg:px-20 xl:px-28 2xl:px-36 pt-6 pb-6 gap-5">
-      <div className="flex flex-1 min-h-0 gap-6 items-stretch">
-        {/* LEFT: map, relative so overlays position inside it */}
-        <div className="hidden lg:block w-2/3 flex-shrink-0 h-full rounded-2xl overflow-hidden shadow-md relative">
+    <div className="h-full min-h-0 flex flex-col overflow-hidden bg-gray-100">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden bg-white border-y border-gray-200">
+        {/* LEFT: map surface (full-canvas), relative so overlays position inside it */}
+        <div className="flex-1 min-w-0 min-h-0 relative overflow-hidden bg-white">
           {viewState && (
             <Map
               {...viewState}
@@ -263,17 +263,13 @@ export default function ZipDetailPage() {
           </div>
         </div>
 
-        {/* RIGHT: single card panel*/}
-        <div className="flex-1 lg:flex-none lg:w-1/3 h-full bg-white rounded-2xl shadow-md border border-gray-100 overflow-y-auto min-h-0 flex flex-col justify-start">
-          <div className="px-6 py-6 flex flex-col gap-5">
-            <div className="pl-3">
-              
-            <p className="text-2xl font-bold text-gray-900 mt-2 mb-0">
-  {zip} · Dallas, TX
-</p>
-
-                
-              
+        {/* RIGHT: docked sidebar */}
+        <aside className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 min-h-0 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 overflow-y-auto">
+          <div className="px-6 py-6 flex flex-col gap-5 min-h-0">
+            <div>
+              <p className="text-2xl font-bold text-gray-900 mt-0 mb-0">
+                {zip} · Dallas, TX
+              </p>
             </div>
 
             <div
@@ -392,7 +388,7 @@ export default function ZipDetailPage() {
               />
             </div>
           </div>
-        </div>
+        </aside>
 
         {/* Modal overlay */}
         {activeChartModal && (
