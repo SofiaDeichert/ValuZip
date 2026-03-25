@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import Map, { Source, Layer } from 'react-map-gl/mapbox';
-import { Marker } from 'react-map-gl/mapbox';
+import Map, { Source, Layer, Marker } from 'react-map-gl/mapbox';
 import centroid from '@turf/centroid';
 import geojsonUrl from '../data/dallas-zips.geojson?url';
+import ZipMarkers from '../components/Map/ZipMarkers';
 import PriceForecastChart from '../components/ZipDetail/PriceForecastChart';
 import ZipSelect from '../components/ZipSelect';
 
@@ -100,6 +100,7 @@ export default function ZipDetailPage() {
   const { zip } = useParams();
   const navigate = useNavigate();
   const [viewState, setViewState] = useState(null);
+  const [geojson, setGeojson] = useState(null);
   const [zipFeature, setZipFeature] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [activeChartModal, setActiveChartModal] = useState(null); // 'homePrice' | 'avgSqft' | null
@@ -130,18 +131,23 @@ export default function ZipDetailPage() {
   useEffect(() => {
     fetch(geojsonUrl)
       .then((r) => r.json())
-      .then((data) => {
-        const feature = data.features.find(
-          (f) => String(f.properties.ZipCode) === String(zip),
-        );
-        if (feature) {
-          setZipFeature(feature);
-          const center = centroid(feature);
-          const [lng, lat] = center.geometry.coordinates;
-          setViewState({ longitude: lng, latitude: lat, zoom: 12.5 });
-        }
-      });
-  }, [zip]);
+      .then((data) => setGeojson(data));
+  }, []);
+
+  useEffect(() => {
+    if (!geojson) return;
+    const feature = geojson.features.find(
+      (f) => String(f.properties.ZipCode) === String(zip),
+    );
+    if (feature) {
+      setZipFeature(feature);
+      const c = centroid(feature);
+      const [lng, lat] = c.geometry.coordinates;
+      setViewState({ longitude: lng, latitude: lat, zoom: 12.5 });
+    } else {
+      setZipFeature(null);
+    }
+  }, [zip, geojson]);
 
   const highlightGeojson = zipFeature
     ? { type: 'FeatureCollection', features: [zipFeature] }
@@ -190,6 +196,9 @@ export default function ZipDetailPage() {
                     paint={{ 'line-color': '#006400', 'line-width': 2.5 }}
                   />
                 </Source>
+              )}
+              {geojson && (
+                <ZipMarkers geojson={geojson} excludeZip={zip} />
               )}
               {markerCenter && (
                 <Marker

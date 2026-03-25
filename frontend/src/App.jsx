@@ -1,4 +1,3 @@
-import MapView from './components/Map/MapView';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import MapPage from './pages/MapPage';

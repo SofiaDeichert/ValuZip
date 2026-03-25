@@ -21,7 +21,7 @@ const MapPage = () => {
 
         {/* Map surface — dominant + immersive */}
         <section className="flex-1 min-w-0 min-h-0 relative overflow-hidden bg-white">
-          <MapView selectedZip={selectedZip} />
+          <MapView />
           <div className="absolute top-3 right-3 z-10">
             <ZipSelect style={{ width: 220 }} />
           </div>
