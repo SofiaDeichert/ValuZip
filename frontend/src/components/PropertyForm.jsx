@@ -25,7 +25,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
   };
 
   return (
-    <div className="h-full bg-white rounded-2xl p-7 shadow-md box-border overflow-y-auto flex flex-col justify-center">
+    <div className="w-full h-full bg-white box-border overflow-y-auto flex flex-col justify-start">
       <h2 className="text-4xl font-bold text-gray-900 mb-3">
         Property Details
       </h2>

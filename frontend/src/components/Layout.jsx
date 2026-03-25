@@ -8,7 +8,9 @@ const Layout = ({ children }) => {
   return (
     <div className="flex flex-col h-screen">
       <Header />
-      <main className="flex-1 overflow-hidden min-h-0 py-8">{children}</main>
+      <main className="flex-1 overflow-hidden min-h-0 py-3 sm:py-4">
+        {children}
+      </main>
       <Footer />
     </div>
   );
