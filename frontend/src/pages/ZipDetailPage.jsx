@@ -264,7 +264,7 @@ export default function ZipDetailPage() {
             </div>
 
             <div
-              className="bg-gray-50 rounded-xl p-5 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+              className="bg-gray-50 rounded-xl p-5 border border-gray-100 cursor-pointer transition-all duration-200 hover:shadow-sm hover:border-gray-200 hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-50"
               role="button"
               tabIndex={0}
               onClick={() => setActiveChartModal('homePrice')}
@@ -276,19 +276,24 @@ export default function ZipDetailPage() {
               }}
               aria-label="Open median home price chart in modal"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path
-                      d="M1 6.5L8 1L15 6.5V15H10V10H6V15H1V6.5Z"
-                      stroke="#16a34a"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path
+                        d="M1 6.5L8 1L15 6.5V15H10V10H6V15H1V6.5Z"
+                        stroke="#16a34a"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-md font-semibold text-gray-400 uppercase tracking-wide truncate">
+                    Median Home Price
+                  </span>
                 </div>
-                <span className="text-md font-semibold text-gray-400 uppercase tracking-wide">
-                  Median Home Price
+                <span className="text-xs font-medium text-gray-400 whitespace-nowrap">
+                  Click to expand
                 </span>
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">
@@ -309,7 +314,7 @@ export default function ZipDetailPage() {
             </div>
 
             <div
-              className="bg-gray-50 rounded-xl p-5 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+              className="bg-gray-50 rounded-xl p-5 border border-gray-100 cursor-pointer transition-all duration-200 hover:shadow-sm hover:border-gray-200 hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-50"
               role="button"
               tabIndex={0}
               onClick={() => setActiveChartModal('avgSqft')}
@@ -321,29 +326,34 @@ export default function ZipDetailPage() {
               }}
               aria-label="Open average price per square foot chart in modal"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <rect
-                      x="1"
-                      y="1"
-                      width="14"
-                      height="14"
-                      rx="2"
-                      stroke="#2563eb"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M4 12L12 4M4 4H7M4 4V7"
-                      stroke="#2563eb"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <rect
+                        x="1"
+                        y="1"
+                        width="14"
+                        height="14"
+                        rx="2"
+                        stroke="#2563eb"
+                        strokeWidth="1.5"
+                      />
+                      <path
+                        d="M4 12L12 4M4 4H7M4 4V7"
+                        stroke="#2563eb"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-md font-semibold text-gray-400 uppercase tracking-wide truncate">
+                    Avg. Price / Sq Ft
+                  </span>
                 </div>
-                <span className="text-md font-semibold text-gray-400 uppercase tracking-wide">
-                  Avg. Price / Sq Ft
+                <span className="text-xs font-medium text-gray-400 whitespace-nowrap">
+                  Click to expand
                 </span>
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">
