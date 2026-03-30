@@ -56,6 +56,9 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     return Math.max(0, parsed);
   };
 
+  /** Dallas ZIP filter: digits only, max 5 (paste and typing are sanitized). */
+  const sanitizeZipInput = (value) => value.replace(/\D/g, '').slice(0, 5);
+
   const getBedsBathsLabel = () => {
     const { bedrooms, bathrooms } = formData;
     if (!bedrooms && !bathrooms) return 'Beds & Baths';
@@ -388,6 +391,13 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
+    if (name === 'zip') {
+      const sanitized = sanitizeZipInput(value);
+      setFormData((prev) => ({ ...prev, zip: sanitized }));
+      setSelectedZip(sanitized);
+      return;
+    }
+
     if (numericFields.has(name)) {
       const sanitized = sanitizeNumericInput(value);
       setFormData((prev) => ({ ...prev, [name]: sanitized }));
@@ -395,7 +405,6 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     }
 
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (name === 'zip') setSelectedZip(value);
   };
 
   const handleSubmit = (e) => {
@@ -427,8 +436,8 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[160px] flex-1">
             <div className="relative">
-              <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="h-4 w-4 opacity-90" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <path d="m14 14 3.5 3.5M9 15.5a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
@@ -437,11 +446,15 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
               </label>
               <input
                 type="text"
+                inputMode="numeric"
                 name="zip"
+                autoComplete="postal-code"
+                maxLength={5}
                 value={formData.zip}
                 onChange={handleChange}
-                placeholder="Enter ZIP"
-                className={`h-12 w-full rounded-lg border pl-10 pr-4 pb-[8px] pt-4.5 text-base text-gray-900 outline-none transition-all duration-150 ${
+                placeholder="e.g. 75201"
+                aria-label="ZIP code, 5 digits"
+                className={`h-12 w-full rounded-lg border pl-10 pr-4 pb-[8px] pt-4.5 text-base tabular-nums tracking-wide text-gray-900 outline-none transition-all duration-150 placeholder:text-gray-400 ${
                   isZipActive
                     ? 'border-[#006400]/45 bg-[#006400]/[0.04] font-bold text-gray-950 hover:border-[#006400]/55'
                     : 'border-gray-300 bg-white font-semibold hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)]'
