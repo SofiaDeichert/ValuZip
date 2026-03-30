@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 const PRICE_FLOOR = 0;
-const PRICE_CEILING = 2000000;
-const PRICE_STEP = 10000;
+const PRICE_CEILING = 10000000;
+const PRICE_STEP = 50000;
+const SQFT_FLOOR = 0;
+const SQFT_CEILING = 10000;
 const HISTOGRAM_BARS = [
   8, 12, 16, 22, 30, 36, 44, 52, 60, 66, 72, 78, 82, 86, 90, 94, 98, 96, 92, 88, 84, 78, 72, 66,
   58, 50, 42, 36, 30, 26, 22, 18, 16, 14, 12, 10,
@@ -14,12 +16,15 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     bedrooms: '',
     bathrooms: '',
     sqft: '',
+    minSqft: '',
+    maxSqft: '',
     minPrice: '',
     maxPrice: '',
     timeRange: 'Last 3 years',
   });
   const [isBedsBathsOpen, setIsBedsBathsOpen] = useState(false);
   const [isPriceOpen, setIsPriceOpen] = useState(false);
+  const [isSqftOpen, setIsSqftOpen] = useState(false);
   const [pendingBedsBaths, setPendingBedsBaths] = useState({
     bedrooms: '',
     bathrooms: '',
@@ -28,12 +33,17 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     minPrice: '',
     maxPrice: '',
   });
+  const [pendingSqft, setPendingSqft] = useState({
+    minSqft: '',
+    maxSqft: '',
+  });
   const [activePriceHandle, setActivePriceHandle] = useState(null);
   const bedsBathsRef = useRef(null);
   const priceRef = useRef(null);
+  const sqftRef = useRef(null);
   const priceHistogramRef = useRef(null);
 
-  const numericFields = new Set(['sqft', 'minPrice', 'maxPrice']);
+  const numericFields = new Set(['sqft', 'minPrice', 'maxPrice', 'minSqft', 'maxSqft']);
 
   const sanitizeNumericInput = (value) => {
     if (value === '') return '';
@@ -64,7 +74,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
   const formatCompactPriceLabel = (value) => {
     const amount = Number(value);
     if (!Number.isFinite(amount) || amount <= 0) return '$0';
-    if (amount >= 10000000) return '$10M+';
+    if (amount >= PRICE_CEILING) return '$10M+';
     if (amount >= 1000000) {
       const inMillions = amount / 1000000;
       return `$${Number.isInteger(inMillions) ? inMillions : inMillions.toFixed(1)}M`;
@@ -106,7 +116,56 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     if (!hasMin && !hasMax) return 'Any Price';
     if (!hasMin && hasMax) return `Under ${formatCompactPriceLabel(max)}`;
     if (hasMin && !hasMax) return `${formatCompactPriceLabel(min)}+`;
+    if (hasMin && hasMax && max >= PRICE_CEILING) {
+      return `${formatCompactPriceLabel(min)}-${formatCompactPriceLabel(PRICE_CEILING)}`;
+    }
     return `${formatCompactPriceLabel(min)}-${formatCompactPriceLabel(max)}`;
+  };
+
+  const clampSqft = (value) => {
+    if (!Number.isFinite(value)) return null;
+    return Math.min(SQFT_CEILING, Math.max(SQFT_FLOOR, value));
+  };
+
+  const sanitizeSqftTextInput = (value) => {
+    if (value === '') return '';
+    const digitsOnly = String(value).replace(/[^\d]/g, '');
+    if (!digitsOnly) return '';
+    const parsed = Number(digitsOnly);
+    if (!Number.isFinite(parsed)) return '';
+    return parsed;
+  };
+
+  const formatSqftLabel = (value) => {
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount < 0) return '';
+    return amount.toLocaleString('en-US');
+  };
+
+  const getNormalizedPendingSqft = () => {
+    const rawMin = pendingSqft.minSqft === '' ? null : clampSqft(Number(pendingSqft.minSqft));
+    const rawMax = pendingSqft.maxSqft === '' ? null : clampSqft(Number(pendingSqft.maxSqft));
+
+    if (rawMin !== null && rawMax !== null && rawMin > rawMax) {
+      return { min: rawMin, max: rawMin };
+    }
+
+    return { min: rawMin, max: rawMax };
+  };
+
+  const getSqftSummaryLabel = () => {
+    const min = Number(formData.minSqft);
+    const max = Number(formData.maxSqft);
+    const hasMin = Number.isFinite(min) && min > 0;
+    const hasMax = Number.isFinite(max) && max > 0;
+
+    if (!hasMin && !hasMax) return 'Any Sq Ft';
+    if (!hasMin && hasMax) return `Under ${formatSqftLabel(max)} sqft`;
+    if (hasMin && !hasMax) return `${formatSqftLabel(min)}+ sqft`;
+    if (hasMin && hasMax && max >= SQFT_CEILING) {
+      return `${formatSqftLabel(min)}-${formatSqftLabel(SQFT_CEILING)}+ sqft`;
+    }
+    return `${formatSqftLabel(min)}-${formatSqftLabel(max)} sqft`;
   };
 
   const applyBedsBaths = () => {
@@ -126,6 +185,19 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
       maxPrice: max === null ? '' : max,
     }));
     setIsPriceOpen(false);
+  };
+
+  const applySqft = () => {
+    const normalized = getNormalizedPendingSqft();
+    const minSqft = normalized.min === null ? '' : normalized.min;
+    const maxSqft = normalized.max === null ? '' : normalized.max;
+    setFormData((prev) => ({
+      ...prev,
+      minSqft,
+      maxSqft,
+      sqft: minSqft,
+    }));
+    setIsSqftOpen(false);
   };
 
   const handlePendingMinInput = (value) => {
@@ -166,6 +238,42 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     });
   };
 
+  const handlePendingMinSqftInput = (value) => {
+    const sanitized = sanitizeSqftTextInput(value);
+    if (sanitized === '') {
+      setPendingSqft((prev) => ({ ...prev, minSqft: '' }));
+      return;
+    }
+
+    const minValue = clampSqft(Number(sanitized));
+    setPendingSqft((prev) => {
+      const existingMax = prev.maxSqft === '' ? null : clampSqft(Number(prev.maxSqft));
+      const nextMax = existingMax !== null && existingMax < minValue ? minValue : existingMax;
+      return {
+        minSqft: minValue,
+        maxSqft: nextMax === null ? '' : nextMax,
+      };
+    });
+  };
+
+  const handlePendingMaxSqftInput = (value) => {
+    const sanitized = sanitizeSqftTextInput(value);
+    if (sanitized === '') {
+      setPendingSqft((prev) => ({ ...prev, maxSqft: '' }));
+      return;
+    }
+
+    const maxValue = clampSqft(Number(sanitized));
+    setPendingSqft((prev) => {
+      const existingMin = prev.minSqft === '' ? null : clampSqft(Number(prev.minSqft));
+      const nextMin = existingMin !== null && existingMin > maxValue ? maxValue : existingMin;
+      return {
+        minSqft: nextMin === null ? '' : nextMin,
+        maxSqft: maxValue,
+      };
+    });
+  };
+
   useEffect(() => {
     setFormData((prev) => ({ ...prev, zip: selectedZip || '' }));
   }, [selectedZip]);
@@ -195,6 +303,19 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isPriceOpen]);
+
+  useEffect(() => {
+    if (!isSqftOpen) return;
+
+    const handleClickOutside = (event) => {
+      if (sqftRef.current && !sqftRef.current.contains(event.target)) {
+        setIsSqftOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isSqftOpen]);
 
   useEffect(() => {
     if (!isPriceOpen || !activePriceHandle) return;
@@ -378,21 +499,113 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
             )}
           </div>
 
-          <div className="min-w-[140px] flex-1">
-            <div className="relative">
-              <label className="pointer-events-none absolute left-4 top-[6px] text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          <div ref={sqftRef} className="relative min-w-[170px] flex-1">
+            <button
+              type="button"
+              onClick={() => {
+                setPendingSqft({
+                  minSqft: formData.minSqft || '',
+                  maxSqft: formData.maxSqft || '',
+                });
+                setIsSqftOpen((prev) => !prev);
+              }}
+              className="h-10 w-full rounded-full border border-gray-300 bg-white px-4 text-left text-sm text-gray-900 outline-none transition-all hover:border-gray-400 focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
+            >
+              <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">
                 Square Footage
-              </label>
-              <input
-                type="number"
-                name="sqft"
-                value={formData.sqft}
-                onChange={handleChange}
-                placeholder="Any"
-                min="0"
-                className="h-11 w-full rounded-full border border-gray-300 bg-white px-4 pb-[7px] pt-4 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
-              />
-            </div>
+              </span>
+              <span className="block truncate text-sm font-medium text-gray-900">{getSqftSummaryLabel()}</span>
+            </button>
+
+            {isSqftOpen && (
+              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[332px] rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.14)]">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Square Footage</p>
+                  <p className="text-sm font-semibold text-gray-900">{getSqftSummaryLabel()}</p>
+                </div>
+
+                <div className="mb-3 grid grid-cols-2 gap-2.5">
+                  <div>
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                      Min Sq Ft
+                    </p>
+                    <input
+                      type="text"
+                      value={pendingSqft.minSqft}
+                      onChange={(e) => handlePendingMinSqftInput(e.target.value)}
+                      placeholder="No Min"
+                      className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+                    />
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                      Max Sq Ft
+                    </p>
+                    <input
+                      type="text"
+                      value={pendingSqft.maxSqft}
+                      onChange={(e) => handlePendingMaxSqftInput(e.target.value)}
+                      placeholder="No Max"
+                      className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                    Quick Ranges
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: 'Under 1,500', min: '', max: 1500 },
+                      { label: '1,500-3,000', min: 1500, max: 3000 },
+                      { label: '3,000-5,000', min: 3000, max: 5000 },
+                      { label: '5,000+', min: 5000, max: '' },
+                    ].map((option) => {
+                      const isActive =
+                        String(pendingSqft.minSqft) === String(option.min) &&
+                        String(pendingSqft.maxSqft) === String(option.max);
+                      return (
+                        <button
+                          key={`sqft-${option.label}`}
+                          type="button"
+                          onClick={() =>
+                            setPendingSqft({
+                              minSqft: option.min,
+                              maxSqft: option.max,
+                            })
+                          }
+                          className={`h-8 rounded-full px-3 text-xs font-medium transition ${
+                            isActive
+                              ? 'bg-[#006400] text-white'
+                              : 'border border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setPendingSqft({ minSqft: '', maxSqft: '' })}
+                    className="text-xs font-semibold text-gray-500 transition hover:text-gray-700"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applySqft}
+                    className="h-8 rounded-full bg-[#006400] px-4 text-xs font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div ref={priceRef} className="relative min-w-[150px] flex-1">
@@ -422,7 +635,9 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                     {normalizedPending.min === null && normalizedPending.max === null
                       ? 'Any Price'
                       : `${normalizedPending.min === null ? '$0' : formatCompactPriceLabel(normalizedPending.min)} - ${
-                          normalizedPending.max === null ? formatPriceLabel(PRICE_CEILING) : formatPriceLabel(normalizedPending.max)
+                          normalizedPending.max === null
+                            ? formatCompactPriceLabel(PRICE_CEILING)
+                            : formatCompactPriceLabel(normalizedPending.max)
                         }`}
                   </p>
                 </div>
