@@ -6,76 +6,9 @@ import geojsonUrl from '../data/dallas-zips.geojson?url';
 import ZipMarkers from '../components/Map/ZipMarkers';
 import PriceForecastChart from '../components/ZipDetail/PriceForecastChart';
 import ZipSelect from '../components/ZipSelect';
+import { getZipAnalytics } from '../data/zipAnalytics';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-
-const MOCK_STATS = {
-  medianHomePrice: 565000,
-  avgPricePerSqft: 312,
-  lastUpdated: '03/23/2026',
-};
-
-const HOME_PRICE_HISTORICAL = [
-  { date: 'Mar 2024', value: 495000 },
-  { date: 'Apr 2024', value: 502000 },
-  { date: 'May 2024', value: 510000 },
-  { date: 'Jun 2024', value: 518000 },
-  { date: 'Jul 2024', value: 525000 },
-  { date: 'Aug 2024', value: 530000 },
-  { date: 'Sep 2024', value: 534000 },
-  { date: 'Oct 2024', value: 538000 },
-  { date: 'Nov 2024', value: 542000 },
-  { date: 'Dec 2024', value: 548000 },
-  { date: 'Jan 2025', value: 553000 },
-  { date: 'Feb 2025', value: 558000 },
-  { date: 'Mar 2025', value: 565000 },
-];
-
-const HOME_PRICE_FORECAST = [
-  { date: 'Apr 2025', value: 570000 },
-  { date: 'May 2025', value: 576000 },
-  { date: 'Jun 2025', value: 582000 },
-  { date: 'Jul 2025', value: 589000 },
-  { date: 'Aug 2025', value: 595000 },
-  { date: 'Sep 2025', value: 601000 },
-  { date: 'Oct 2025', value: 607000 },
-  { date: 'Nov 2025', value: 612000 },
-  { date: 'Dec 2025', value: 618000 },
-  { date: 'Jan 2026', value: 623000 },
-  { date: 'Feb 2026', value: 629000 },
-  { date: 'Mar 2026', value: 634000 },
-];
-
-const SQFT_HISTORICAL = [
-  { date: 'Mar 2024', value: 274 },
-  { date: 'Apr 2024', value: 278 },
-  { date: 'May 2024', value: 281 },
-  { date: 'Jun 2024', value: 285 },
-  { date: 'Jul 2024', value: 288 },
-  { date: 'Aug 2024', value: 291 },
-  { date: 'Sep 2024', value: 294 },
-  { date: 'Oct 2024', value: 296 },
-  { date: 'Nov 2024', value: 299 },
-  { date: 'Dec 2024', value: 303 },
-  { date: 'Jan 2025', value: 306 },
-  { date: 'Feb 2025', value: 309 },
-  { date: 'Mar 2025', value: 312 },
-];
-
-const SQFT_FORECAST = [
-  { date: 'Apr 2025', value: 315 },
-  { date: 'May 2025', value: 318 },
-  { date: 'Jun 2025', value: 321 },
-  { date: 'Jul 2025', value: 324 },
-  { date: 'Aug 2025', value: 327 },
-  { date: 'Sep 2025', value: 330 },
-  { date: 'Oct 2025', value: 333 },
-  { date: 'Nov 2025', value: 336 },
-  { date: 'Dec 2025', value: 339 },
-  { date: 'Jan 2026', value: 341 },
-  { date: 'Feb 2026', value: 344 },
-  { date: 'Mar 2026', value: 347 },
-];
 
 const homePriceTickFmt = (v) => {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -104,6 +37,17 @@ export default function ZipDetailPage() {
   const [zipFeature, setZipFeature] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [activeChartModal, setActiveChartModal] = useState(null); // 'homePrice' | 'avgSqft' | null
+  const [zipAnalytics, setZipAnalytics] = useState({
+    city: 'Dallas',
+    state: 'TX',
+    medianHomePrice: 0,
+    avgPricePerSqft: 0,
+    lastUpdated: '--/--/----',
+    homePriceHistorical: [],
+    homePriceForecast: [],
+    sqftHistorical: [],
+    sqftForecast: [],
+  });
 
   useEffect(() => {
     if (!activeChartModal) return;
@@ -148,6 +92,17 @@ export default function ZipDetailPage() {
       setZipFeature(null);
     }
   }, [zip, geojson]);
+
+  useEffect(() => {
+    let alive = true;
+    getZipAnalytics(zip).then((data) => {
+      if (!alive) return;
+      setZipAnalytics(data);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [zip]);
 
   const highlightGeojson = zipFeature
     ? { type: 'FeatureCollection', features: [zipFeature] }
@@ -229,7 +184,7 @@ export default function ZipDetailPage() {
                           {zip}
                         </div>
                         <div className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-                          Dallas, TX
+                          {zipAnalytics.city}, {zipAnalytics.state}
                         </div>
                       </div>
                     </div>
@@ -277,7 +232,7 @@ export default function ZipDetailPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col gap-5 min-h-0">
             <div>
               <p className="text-2xl font-bold text-gray-900 mt-0 mb-0">
-                {zip} · Dallas, TX
+                {zip} · {zipAnalytics.city}, {zipAnalytics.state}
               </p>
             </div>
 
@@ -315,17 +270,17 @@ export default function ZipDetailPage() {
                 </span>
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">
-                {formatPrice(MOCK_STATS.medianHomePrice)}
+                {formatPrice(zipAnalytics.medianHomePrice)}
               </div>
               <div className="mt-1 text-sm text-gray-600">
                 12-month forecast shows steady upward movement
               </div>
               <div className="text-sm text-gray-400 mb-5">
-                Last updated: {MOCK_STATS.lastUpdated}
+                Last updated: {zipAnalytics.lastUpdated}
               </div>
               <PriceForecastChart
-                historicalData={HOME_PRICE_HISTORICAL}
-                forecastData={HOME_PRICE_FORECAST}
+                historicalData={zipAnalytics.homePriceHistorical}
+                forecastData={zipAnalytics.homePriceForecast}
                 color="#006400"
                 xAxisLabel="Date"
                 yAxisLabel="Price (USD)"
@@ -378,17 +333,17 @@ export default function ZipDetailPage() {
                 </span>
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">
-                ${MOCK_STATS.avgPricePerSqft}
+                ${zipAnalytics.avgPricePerSqft}
               </div>
               <div className="mt-1 text-sm text-gray-600">
                 Price per sq ft is expected to trend upward
               </div>
               <div className="text-xs text-gray-400 mb-5">
-                Last updated: {MOCK_STATS.lastUpdated}
+                Last updated: {zipAnalytics.lastUpdated}
               </div>
               <PriceForecastChart
-                historicalData={SQFT_HISTORICAL}
-                forecastData={SQFT_FORECAST}
+                historicalData={zipAnalytics.sqftHistorical}
+                forecastData={zipAnalytics.sqftForecast}
                 color="#2563eb"
                 xAxisLabel="Date"
                 yAxisLabel="USD / sq ft"
@@ -419,7 +374,8 @@ export default function ZipDetailPage() {
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 leading-tight">{modalTitle}</h3>
                   <p className="text-sm text-gray-500">
-                    ZIP Code {zip} · Dallas, TX · Last updated {MOCK_STATS.lastUpdated}
+                    ZIP Code {zip} · {zipAnalytics.city}, {zipAnalytics.state} · Last updated{' '}
+                    {zipAnalytics.lastUpdated}
                   </p>
                 </div>
                 <button
@@ -443,8 +399,8 @@ export default function ZipDetailPage() {
                 <div className="w-full">
                   {activeChartModal === 'homePrice' && (
                     <PriceForecastChart
-                      historicalData={HOME_PRICE_HISTORICAL}
-                      forecastData={HOME_PRICE_FORECAST}
+                      historicalData={zipAnalytics.homePriceHistorical}
+                      forecastData={zipAnalytics.homePriceForecast}
                       color="#006400"
                       xAxisLabel="Date"
                       yAxisLabel="Price (USD)"
@@ -454,8 +410,8 @@ export default function ZipDetailPage() {
                   )}
                   {activeChartModal === 'avgSqft' && (
                     <PriceForecastChart
-                      historicalData={SQFT_HISTORICAL}
-                      forecastData={SQFT_FORECAST}
+                      historicalData={zipAnalytics.sqftHistorical}
+                      forecastData={zipAnalytics.sqftForecast}
                       color="#2563eb"
                       xAxisLabel="Date"
                       yAxisLabel="USD / sq ft"
