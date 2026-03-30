@@ -11,8 +11,8 @@ const HISTOGRAM_BARS = [
 ];
 
 export default function PropertyForm({ selectedZip, setSelectedZip }) {
-  const [formData, setFormData] = useState({
-    zip: selectedZip || '',
+  const defaultFormData = {
+    zip: '',
     bedrooms: '',
     bathrooms: '',
     sqft: '',
@@ -21,6 +21,10 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     minPrice: '',
     maxPrice: '',
     timeRange: 'Last 3 years',
+  };
+  const [formData, setFormData] = useState({
+    ...defaultFormData,
+    zip: selectedZip || '',
   });
   const [isBedsBathsOpen, setIsBedsBathsOpen] = useState(false);
   const [isPriceOpen, setIsPriceOpen] = useState(false);
@@ -59,6 +63,24 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     if (bedrooms) return `${bedrooms}+ bd`;
     return `${bathrooms}+ ba`;
   };
+
+  const isZipActive = Boolean(String(formData.zip || '').trim());
+  const isBedsBathsActive = Boolean(formData.bedrooms || formData.bathrooms);
+  const isSqftActive = Boolean(formData.minSqft || formData.maxSqft);
+  const isPriceActive = Boolean(formData.minPrice || formData.maxPrice);
+  const isTimeRangeActive = formData.timeRange !== defaultFormData.timeRange;
+  const hasAnyActiveFilters =
+    isZipActive || isBedsBathsActive || isSqftActive || isPriceActive || isTimeRangeActive;
+
+  const getFilterControlClass = (isActive) =>
+    `h-12 w-full rounded-lg border bg-white px-4 text-left text-gray-900 outline-none transition-all duration-150 ${
+      isActive
+        ? 'border-[#006400]/45 bg-[#006400]/[0.04] hover:border-[#006400]/55'
+        : 'border-gray-300 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)]'
+    } focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20`;
+
+  const getFilterValueClass = (isActive) =>
+    `block truncate text-base ${isActive ? 'font-bold text-gray-950' : 'font-semibold text-gray-900'}`;
 
   const formatPriceLabel = (value) => {
     const amount = Number(value);
@@ -381,6 +403,18 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     console.log('Property data submitted:', formData);
   };
 
+  const handleClearAll = () => {
+    setFormData(defaultFormData);
+    setPendingBedsBaths({ bedrooms: '', bathrooms: '' });
+    setPendingPrice({ minPrice: '', maxPrice: '' });
+    setPendingSqft({ minSqft: '', maxSqft: '' });
+    setIsBedsBathsOpen(false);
+    setIsPriceOpen(false);
+    setIsSqftOpen(false);
+    setActivePriceHandle(null);
+    setSelectedZip('');
+  };
+
   const normalizedPending = getNormalizedPendingPrice();
   const sliderMinValue = normalizedPending.min ?? PRICE_FLOOR;
   const sliderMaxValue = normalizedPending.max ?? PRICE_CEILING;
@@ -407,7 +441,11 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 value={formData.zip}
                 onChange={handleChange}
                 placeholder="Enter ZIP"
-                className="h-12 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 pb-[8px] pt-4.5 text-base font-semibold text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+                className={`h-12 w-full rounded-lg border pl-10 pr-4 pb-[8px] pt-4.5 text-base text-gray-900 outline-none transition-all duration-150 ${
+                  isZipActive
+                    ? 'border-[#006400]/45 bg-[#006400]/[0.04] font-bold text-gray-950 hover:border-[#006400]/55'
+                    : 'border-gray-300 bg-white font-semibold hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)]'
+                } focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20`}
               />
             </div>
           </div>
@@ -422,7 +460,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 });
                 setIsBedsBathsOpen((prev) => !prev);
               }}
-              className="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-left text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
+              className={getFilterControlClass(isBedsBathsActive)}
             >
               <span className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2.5">
@@ -430,7 +468,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                   <span className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                     Beds & Baths
                   </span>
-                  <span className="block truncate text-base font-semibold text-gray-900">{getBedsBathsLabel()}</span>
+                  <span className={getFilterValueClass(isBedsBathsActive)}>{getBedsBathsLabel()}</span>
                   </span>
                 </span>
                 <svg
@@ -531,7 +569,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 });
                 setIsSqftOpen((prev) => !prev);
               }}
-              className="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-left text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
+              className={getFilterControlClass(isSqftActive)}
             >
               <span className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2.5">
@@ -539,7 +577,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                   <span className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                     Square Footage
                   </span>
-                  <span className="block truncate text-base font-semibold text-gray-900">{getSqftSummaryLabel()}</span>
+                  <span className={getFilterValueClass(isSqftActive)}>{getSqftSummaryLabel()}</span>
                   </span>
                 </span>
                 <svg
@@ -655,7 +693,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 setActivePriceHandle(null);
                 setIsPriceOpen((prev) => !prev);
               }}
-              className="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-left text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
+              className={getFilterControlClass(isPriceActive)}
             >
               <span className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2.5">
@@ -663,7 +701,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                   <span className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                     Price
                   </span>
-                  <span className="block truncate text-base font-semibold text-gray-900">{getPriceSummaryLabel()}</span>
+                  <span className={getFilterValueClass(isPriceActive)}>{getPriceSummaryLabel()}</span>
                   </span>
                 </span>
                 <svg
@@ -821,7 +859,11 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 name="timeRange"
                 value={formData.timeRange}
                 onChange={handleChange}
-                className="h-12 w-full appearance-none rounded-lg border border-gray-300 bg-white pb-[8px] pl-10 pr-10 pt-4.5 text-base font-semibold text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+                className={`h-12 w-full appearance-none rounded-lg border pb-[8px] pl-10 pr-10 pt-4.5 text-base outline-none transition-all duration-150 ${
+                  isTimeRangeActive
+                    ? 'border-[#006400]/45 bg-[#006400]/[0.04] font-bold text-gray-950 hover:border-[#006400]/55'
+                    : 'border-gray-300 bg-white font-semibold text-gray-900 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)]'
+                } focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20`}
               >
                 <option>Last 1 year</option>
                 <option>Last 3 years</option>
@@ -835,6 +877,20 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
               </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className={`h-12 px-1 text-sm font-semibold transition ${
+              hasAnyActiveFilters
+                ? 'text-gray-600 hover:text-gray-800'
+                : 'cursor-default text-gray-400'
+            }`}
+            disabled={!hasAnyActiveFilters}
+            aria-label="Clear all filters"
+          >
+            Clear all
+          </button>
 
           <button
             type="submit"
