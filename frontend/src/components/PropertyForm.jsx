@@ -389,11 +389,16 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-wrap items-center gap-2.5">
+      <div className="rounded-lg border border-gray-200 bg-gray-50/90 px-4 py-3.5 shadow-[0_5px_16px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[160px] flex-1">
             <div className="relative">
-              <label className="pointer-events-none absolute left-4 top-[6px] text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="m14 14 3.5 3.5M9 15.5a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <label className="pointer-events-none absolute left-10 top-[6px] text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                 ZIP Code
               </label>
               <input
@@ -402,7 +407,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 value={formData.zip}
                 onChange={handleChange}
                 placeholder="Enter ZIP"
-                className="h-11 w-full rounded-full border border-gray-300 bg-white px-4 pb-[7px] pt-4 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+                className="h-12 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 pb-[8px] pt-4.5 text-base font-semibold text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
               />
             </div>
           </div>
@@ -417,15 +422,32 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 });
                 setIsBedsBathsOpen((prev) => !prev);
               }}
-              className="h-10 w-full rounded-full border border-gray-300 bg-white px-4 text-left text-sm text-gray-900 outline-none transition-all hover:border-gray-400 focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
+              className="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-left text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
             >
-              {getBedsBathsLabel()}
+              <span className="flex items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span className="min-w-0">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    Beds & Baths
+                  </span>
+                  <span className="block truncate text-base font-semibold text-gray-900">{getBedsBathsLabel()}</span>
+                  </span>
+                </span>
+                <svg
+                  className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isBedsBathsOpen ? 'rotate-180' : ''}`}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path d="m5 7.5 5 5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
             </button>
 
             {isBedsBathsOpen && (
-              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[270px] rounded-xl border border-gray-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.12)]">
-                <div className="mb-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
+              <div className="absolute left-0 top-[calc(100%+10px)] z-20 w-[300px] rounded-lg border border-gray-200 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.14)]">
+                <div className="mb-4">
+                  <p className="mb-2.5 text-[13px] font-semibold uppercase tracking-wide text-gray-600">
                     Bedrooms
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -443,7 +465,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                         onClick={() =>
                           setPendingBedsBaths((prev) => ({ ...prev, bedrooms: option.value }))
                         }
-                        className={`h-8 rounded-full px-3 text-xs font-medium transition ${
+                        className={`h-9 rounded-md px-3.5 text-[13px] font-medium transition ${
                           pendingBedsBaths.bedrooms === option.value
                             ? 'bg-[#006400] text-white'
                             : 'border border-gray-300 bg-white text-gray-700 hover:border-gray-400'
@@ -456,7 +478,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 </div>
 
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  <p className="mb-2.5 text-[13px] font-semibold uppercase tracking-wide text-gray-600">
                     Bathrooms
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -474,7 +496,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                         onClick={() =>
                           setPendingBedsBaths((prev) => ({ ...prev, bathrooms: option.value }))
                         }
-                        className={`h-8 rounded-full px-3 text-xs font-medium transition ${
+                        className={`h-9 rounded-md px-3.5 text-[13px] font-medium transition ${
                           pendingBedsBaths.bathrooms === option.value
                             ? 'bg-[#006400] text-white'
                             : 'border border-gray-300 bg-white text-gray-700 hover:border-gray-400'
@@ -486,11 +508,11 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                   </div>
                 </div>
 
-                <div className="mt-4 flex justify-end">
+                <div className="mt-5 flex justify-end">
                   <button
                     type="button"
                     onClick={applyBedsBaths}
-                    className="h-8 rounded-full bg-[#006400] px-4 text-xs font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    className="h-9 rounded-md bg-[#006400] px-5 text-[13px] font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                   >
                     Apply
                   </button>
@@ -509,24 +531,38 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 });
                 setIsSqftOpen((prev) => !prev);
               }}
-              className="h-10 w-full rounded-full border border-gray-300 bg-white px-4 text-left text-sm text-gray-900 outline-none transition-all hover:border-gray-400 focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
+              className="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-left text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
             >
-              <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                Square Footage
+              <span className="flex items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span className="min-w-0">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    Square Footage
+                  </span>
+                  <span className="block truncate text-base font-semibold text-gray-900">{getSqftSummaryLabel()}</span>
+                  </span>
+                </span>
+                <svg
+                  className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isSqftOpen ? 'rotate-180' : ''}`}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path d="m5 7.5 5 5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </span>
-              <span className="block truncate text-sm font-medium text-gray-900">{getSqftSummaryLabel()}</span>
             </button>
 
             {isSqftOpen && (
-              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[332px] rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.14)]">
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Square Footage</p>
-                  <p className="text-sm font-semibold text-gray-900">{getSqftSummaryLabel()}</p>
+              <div className="absolute left-0 top-[calc(100%+10px)] z-20 w-[372px] rounded-lg border border-gray-200 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.14)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-600">Square Footage</p>
+                  <p className="text-base font-semibold text-gray-900">{getSqftSummaryLabel()}</p>
                 </div>
 
-                <div className="mb-3 grid grid-cols-2 gap-2.5">
+                <div className="mb-4 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                       Min Sq Ft
                     </p>
                     <input
@@ -534,11 +570,11 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                       value={pendingSqft.minSqft}
                       onChange={(e) => handlePendingMinSqftInput(e.target.value)}
                       placeholder="No Min"
-                      className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+                      className="h-10 w-full rounded-md border border-gray-300 bg-gray-50/40 px-3.5 text-[15px] text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
                     />
                   </div>
                   <div>
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                       Max Sq Ft
                     </p>
                     <input
@@ -546,13 +582,13 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                       value={pendingSqft.maxSqft}
                       onChange={(e) => handlePendingMaxSqftInput(e.target.value)}
                       placeholder="No Max"
-                      className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+                      className="h-10 w-full rounded-md border border-gray-300 bg-gray-50/40 px-3.5 text-[15px] text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
                     />
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                <div className="mb-5">
+                  <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                     Quick Ranges
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -575,7 +611,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                               maxSqft: option.max,
                             })
                           }
-                          className={`h-8 rounded-full px-3 text-xs font-medium transition ${
+                          className={`h-9 rounded-md px-3.5 text-[13px] font-medium transition ${
                             isActive
                               ? 'bg-[#006400] text-white'
                               : 'border border-gray-300 bg-white text-gray-700 hover:border-gray-400'
@@ -592,14 +628,14 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                   <button
                     type="button"
                     onClick={() => setPendingSqft({ minSqft: '', maxSqft: '' })}
-                    className="text-xs font-semibold text-gray-500 transition hover:text-gray-700"
+                    className="text-sm font-semibold text-gray-500 transition hover:text-gray-700"
                   >
                     Clear
                   </button>
                   <button
                     type="button"
                     onClick={applySqft}
-                    className="h-8 rounded-full bg-[#006400] px-4 text-xs font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    className="h-9 rounded-md bg-[#006400] px-5 text-[13px] font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                   >
                     Apply
                   </button>
@@ -619,19 +655,33 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 setActivePriceHandle(null);
                 setIsPriceOpen((prev) => !prev);
               }}
-              className="h-10 w-full rounded-full border border-gray-300 bg-white px-4 text-left text-sm text-gray-900 outline-none transition-all hover:border-gray-400 focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
+              className="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-left text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
             >
-              <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                Price
+              <span className="flex items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span className="min-w-0">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    Price
+                  </span>
+                  <span className="block truncate text-base font-semibold text-gray-900">{getPriceSummaryLabel()}</span>
+                  </span>
+                </span>
+                <svg
+                  className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isPriceOpen ? 'rotate-180' : ''}`}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path d="m5 7.5 5 5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </span>
-              <span className="block truncate text-sm font-medium text-gray-900">{getPriceSummaryLabel()}</span>
             </button>
 
             {isPriceOpen && (
-              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[360px] rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.14)]">
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Price Range</p>
-                  <p className="text-sm font-semibold text-gray-900">
+              <div className="absolute left-0 top-[calc(100%+10px)] z-20 w-[398px] rounded-lg border border-gray-200 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.14)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-600">Price Range</p>
+                  <p className="text-base font-semibold text-gray-900">
                     {normalizedPending.min === null && normalizedPending.max === null
                       ? 'Any Price'
                       : `${normalizedPending.min === null ? '$0' : formatCompactPriceLabel(normalizedPending.min)} - ${
@@ -642,14 +692,14 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                   </p>
                 </div>
 
-                <div className="mb-3">
-                  <div className="mb-2 flex items-center justify-between text-xs font-medium text-gray-500">
+                <div className="mb-4">
+                  <div className="mb-2.5 flex items-center justify-between text-sm font-medium text-gray-500">
                     <span>{normalizedPending.min === null ? '$0' : formatCompactPriceLabel(normalizedPending.min)}</span>
                     <span>{normalizedPending.max === null ? formatCompactPriceLabel(PRICE_CEILING) : formatCompactPriceLabel(normalizedPending.max)}</span>
                   </div>
 
-                  <div ref={priceHistogramRef} className="relative h-24 select-none rounded-xl border border-gray-200 bg-gray-50/70 px-2 py-2">
-                    <div className="absolute inset-x-2 bottom-2 top-2 flex items-end gap-[3px]">
+                  <div ref={priceHistogramRef} className="relative h-28 select-none rounded-lg border border-gray-200 bg-gray-50/80 px-2.5 py-2.5">
+                    <div className="absolute inset-x-2.5 bottom-2.5 top-2.5 flex items-end gap-[3px]">
                       {HISTOGRAM_BARS.map((height, index) => {
                         const barCenterPercent = ((index + 0.5) / HISTOGRAM_BARS.length) * 100;
                         const inSelectedRange =
@@ -667,7 +717,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                     </div>
 
                     <div
-                      className="absolute bottom-2 top-2 rounded-lg bg-[#006400]/12"
+                      className="absolute bottom-2.5 top-2.5 rounded-lg bg-[#006400]/12"
                       style={{
                         left: `${minPercent}%`,
                         width: `${Math.max(maxPercent - minPercent, 1)}%`,
@@ -675,11 +725,11 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                     />
 
                     <div
-                      className="absolute bottom-2 top-2 w-[3px] -translate-x-1/2 rounded-full bg-[#006400]"
+                      className="absolute bottom-2.5 top-2.5 w-[3px] -translate-x-1/2 rounded-full bg-[#006400]"
                       style={{ left: `${minPercent}%` }}
                     />
                     <div
-                      className="absolute bottom-2 top-2 w-[3px] -translate-x-1/2 rounded-full bg-[#006400]"
+                      className="absolute bottom-2.5 top-2.5 w-[3px] -translate-x-1/2 rounded-full bg-[#006400]"
                       style={{ left: `${maxPercent}%` }}
                     />
 
@@ -689,7 +739,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                         event.preventDefault();
                         setActivePriceHandle('min');
                       }}
-                      className={`absolute bottom-1 h-5 w-5 -translate-x-1/2 rounded-full border border-[#006400] bg-white shadow-[0_2px_6px_rgba(15,23,42,0.2)] transition ${
+                      className={`absolute bottom-1 h-5.5 w-5.5 -translate-x-1/2 rounded-full border border-[#006400] bg-white shadow-[0_2px_6px_rgba(15,23,42,0.2)] transition ${
                         activePriceHandle === 'min' ? 'ring-2 ring-[#006400]/30' : ''
                       }`}
                       style={{ left: `${minPercent}%` }}
@@ -701,7 +751,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                         event.preventDefault();
                         setActivePriceHandle('max');
                       }}
-                      className={`absolute bottom-1 h-5 w-5 -translate-x-1/2 rounded-full border border-[#006400] bg-white shadow-[0_2px_6px_rgba(15,23,42,0.2)] transition ${
+                      className={`absolute bottom-1 h-5.5 w-5.5 -translate-x-1/2 rounded-full border border-[#006400] bg-white shadow-[0_2px_6px_rgba(15,23,42,0.2)] transition ${
                         activePriceHandle === 'max' ? 'ring-2 ring-[#006400]/30' : ''
                       }`}
                       style={{ left: `${maxPercent}%` }}
@@ -709,15 +759,15 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                     />
                   </div>
 
-                  <div className="mt-1 flex items-center justify-between text-[11px] font-medium text-gray-500">
+                  <div className="mt-2 flex items-center justify-between text-xs font-medium text-gray-500">
                     <span>$0</span>
                     <span>{formatCompactPriceLabel(PRICE_CEILING)}</span>
                   </div>
                 </div>
 
-                <div className="mb-3 grid grid-cols-2 gap-2.5">
+                <div className="mb-4 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                       Min Price
                     </p>
                     <input
@@ -725,11 +775,11 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                       value={pendingPrice.minPrice}
                       onChange={(e) => handlePendingMinInput(e.target.value)}
                       placeholder="No Min"
-                      className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+                      className="h-10 w-full rounded-md border border-gray-300 bg-gray-50/40 px-3.5 text-[15px] text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
                     />
                   </div>
                   <div>
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                       Max Price
                     </p>
                     <input
@@ -737,7 +787,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                       value={pendingPrice.maxPrice}
                       onChange={(e) => handlePendingMaxInput(e.target.value)}
                       placeholder="No Max"
-                      className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+                      className="h-10 w-full rounded-md border border-gray-300 bg-gray-50/40 px-3.5 text-[15px] text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
                     />
                   </div>
                 </div>
@@ -746,14 +796,14 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                   <button
                     type="button"
                     onClick={() => setPendingPrice({ minPrice: '', maxPrice: '' })}
-                    className="text-xs font-semibold text-gray-500 transition hover:text-gray-700"
+                    className="text-sm font-semibold text-gray-500 transition hover:text-gray-700"
                   >
                     Clear
                   </button>
                   <button
                     type="button"
                     onClick={applyPrice}
-                    className="h-8 rounded-full bg-[#006400] px-4 text-xs font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    className="h-9 rounded-md bg-[#006400] px-5 text-[13px] font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                   >
                     Apply
                   </button>
@@ -763,22 +813,32 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
           </div>
 
           <div className="min-w-[160px] flex-1">
-            <select
-              name="timeRange"
-              value={formData.timeRange}
-              onChange={handleChange}
-              className="h-10 w-full rounded-full border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
-            >
-              <option>Last 1 year</option>
-              <option>Last 3 years</option>
-              <option>Last 5 years</option>
-              <option>Last 10 years</option>
-            </select>
+            <div className="relative">
+              <label className="pointer-events-none absolute left-10 top-[6px] text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Time Range
+              </label>
+              <select
+                name="timeRange"
+                value={formData.timeRange}
+                onChange={handleChange}
+                className="h-12 w-full appearance-none rounded-lg border border-gray-300 bg-white pb-[8px] pl-10 pr-10 pt-4.5 text-base font-semibold text-gray-900 outline-none transition-all duration-150 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
+              >
+                <option>Last 1 year</option>
+                <option>Last 3 years</option>
+                <option>Last 5 years</option>
+                <option>Last 10 years</option>
+              </select>
+              <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="m5 7.5 5 5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           <button
             type="submit"
-            className="h-10 min-w-[170px] rounded-full bg-[#006400] px-5 text-sm font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            className="h-12 min-w-[170px] rounded-lg bg-[#006400] px-5 text-base font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
           >
             Analyze Property
           </button>
