@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Map, { Source, Layer, Marker } from 'react-map-gl/mapbox';
 import centroid from '@turf/centroid';
@@ -24,48 +24,25 @@ const sqftTickFmt = (v) => `${v}`;
 const sqftTooltipFmt = (v) => `$${v}/sqft`;
 
 function formatPrice(val) {
+  if (val == null || !Number.isFinite(val)) return '—';
   if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(2)}M`;
   if (val >= 1_000) return `$${(val / 1_000).toFixed(0)}K`;
   return `$${val}`;
 }
 
-function formatAnalysisCurrency(value) {
-  if (value == null || !Number.isFinite(value)) return '—';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatAnalysisPpsf(value) {
-  if (value == null || !Number.isFinite(value)) return '—';
-  return `${new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value)}/sq ft`;
-}
-
 export default function ZipDetailPage() {
   const { zip } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const passedAnalysis = location.state?.propertyAnalysis;
-  const propertyAnalysis =
-    passedAnalysis && String(passedAnalysis.zip) === String(zip)
-      ? passedAnalysis
-      : null;
   const [viewState, setViewState] = useState(null);
   const [geojson, setGeojson] = useState(null);
   const [zipFeature, setZipFeature] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [activeChartModal, setActiveChartModal] = useState(null); // 'homePrice' | 'avgSqft' | null
   const [zipAnalytics, setZipAnalytics] = useState({
-    city: 'Dallas',
-    state: 'TX',
-    medianHomePrice: 0,
-    avgPricePerSqft: 0,
+    city: '',
+    state: '',
+    medianHomePrice: null,
+    avgPricePerSqft: null,
     lastUpdated: '--/--/----',
     homePriceHistorical: [],
     homePriceForecast: [],
@@ -135,6 +112,14 @@ export default function ZipDetailPage() {
   const markerCenter = zipFeature
     ? centroid(zipFeature).geometry.coordinates
     : null;
+
+  const cityStateText = [zipAnalytics.city, zipAnalytics.state].filter(Boolean).join(', ');
+  const homeDataContextText = zipAnalytics.homePriceHistorical.length
+    ? 'Based on recorded monthly sales data'
+    : 'Historical data unavailable';
+  const sqftDataContextText = zipAnalytics.sqftHistorical.length
+    ? 'Based on recorded monthly sales data'
+    : 'Historical data unavailable';
 
   const modalTitle =
     activeChartModal === 'homePrice'
@@ -208,7 +193,7 @@ export default function ZipDetailPage() {
                           {zip}
                         </div>
                         <div className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-                          {zipAnalytics.city}, {zipAnalytics.state}
+                          {cityStateText || '—'}
                         </div>
                       </div>
                     </div>
@@ -256,70 +241,9 @@ export default function ZipDetailPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col gap-5 min-h-0">
             <div>
               <p className="text-2xl font-bold text-gray-900 mt-0 mb-0">
-                {zip} · {zipAnalytics.city}, {zipAnalytics.state}
+                {zip} · {cityStateText || '—'}
               </p>
             </div>
-
-            {propertyAnalysis && (
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                <p className="text-md font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                  Property analysis
-                </p>
-                {!propertyAnalysis.ok ? (
-                  <p className="text-sm font-medium text-amber-800">
-                    {propertyAnalysis.message}
-                  </p>
-                ) : (
-                  <>
-                    <dl className="grid gap-3 text-sm sm:grid-cols-1">
-                      <div>
-                        <dt className="text-gray-500">Estimated price</dt>
-                        <dd className="font-semibold text-gray-900">
-                          {formatAnalysisCurrency(propertyAnalysis.estimatedPoint)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-500">Estimated price range</dt>
-                        <dd className="font-semibold text-gray-900">
-                          {formatAnalysisCurrency(propertyAnalysis.priceBandLow)} –{' '}
-                          {formatAnalysisCurrency(propertyAnalysis.priceBandHigh)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-500">ZIP median home price</dt>
-                        <dd className="font-semibold text-gray-900">
-                          {formatAnalysisCurrency(propertyAnalysis.zipMedianHomePrice)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-500">Avg price / sq ft</dt>
-                        <dd className="font-semibold text-gray-900">
-                          {formatAnalysisPpsf(propertyAnalysis.avgPricePerSqft)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-500">Comparable records</dt>
-                        <dd className="font-semibold text-gray-900 tabular-nums">
-                          {propertyAnalysis.comparableCount.toLocaleString('en-US')}
-                        </dd>
-                      </div>
-                    </dl>
-                    {propertyAnalysis.sqftBasedEstimate != null &&
-                      Number.isFinite(propertyAnalysis.sqftBasedEstimate) && (
-                        <p className="mt-3 text-xs text-gray-600">
-                          Size-adjusted check (avg $/sq ft × your sq ft range):{' '}
-                          <span className="font-semibold text-gray-800">
-                            {formatAnalysisCurrency(propertyAnalysis.sqftBasedEstimate)}
-                          </span>
-                        </p>
-                      )}
-                    <p className="mt-3 text-xs leading-snug text-gray-600">
-                      {propertyAnalysis.note}
-                    </p>
-                  </>
-                )}
-              </div>
-            )}
 
             <div
               className="bg-gray-50 rounded-xl p-5 border border-gray-100 cursor-pointer transition-all duration-200 hover:shadow-sm hover:border-gray-200 hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-50"
@@ -358,7 +282,7 @@ export default function ZipDetailPage() {
                 {formatPrice(zipAnalytics.medianHomePrice)}
               </div>
               <div className="mt-1 text-sm text-gray-600">
-                12-month forecast shows steady upward movement
+                {homeDataContextText}
               </div>
               <div className="text-sm text-gray-400 mb-5">
                 Last updated: {zipAnalytics.lastUpdated}
@@ -418,10 +342,10 @@ export default function ZipDetailPage() {
                 </span>
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">
-                ${zipAnalytics.avgPricePerSqft}
+                {zipAnalytics.avgPricePerSqft == null ? '—' : `$${zipAnalytics.avgPricePerSqft}`}
               </div>
               <div className="mt-1 text-sm text-gray-600">
-                Price per sq ft is expected to trend upward
+                {sqftDataContextText}
               </div>
               <div className="text-xs text-gray-400 mb-5">
                 Last updated: {zipAnalytics.lastUpdated}
@@ -459,7 +383,7 @@ export default function ZipDetailPage() {
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 leading-tight">{modalTitle}</h3>
                   <p className="text-sm text-gray-500">
-                    ZIP Code {zip} · {zipAnalytics.city}, {zipAnalytics.state} · Last updated{' '}
+                    ZIP Code {zip} · {cityStateText || '—'} · Last updated{' '}
                     {zipAnalytics.lastUpdated}
                   </p>
                 </div>

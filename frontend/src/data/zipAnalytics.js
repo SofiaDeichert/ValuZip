@@ -1,4 +1,5 @@
-import datasetUrl from './final_recent_3yrs.csv?url';
+import recentDatasetUrl from './final_recent_3yrs.csv?url';
+import longDatasetUrl from './final_10yrs.csv?url';
 
 const NUMERIC_FIELDS = new Set([
   'sale_price',
@@ -15,7 +16,7 @@ const NUMERIC_FIELDS = new Set([
   'eff_rate_p90',
 ]);
 
-let analyticsPromise;
+const analyticsPromiseByWindow = new Map();
 
 function splitCsvLine(line) {
   const values = [];
@@ -95,41 +96,14 @@ function median(values) {
   return sorted[mid];
 }
 
-function deriveForecast(values, months = 12) {
-  if (!values.length) return [];
-  if (values.length === 1) {
-    return Array.from({ length: months }, (_, i) => ({
-      step: i + 1,
-      value: Math.max(0, values[0]),
-    }));
-  }
-
-  const windowSize = Math.min(6, values.length - 1);
-  const start = values.length - windowSize - 1;
-  let deltaSum = 0;
-  for (let i = start + 1; i < values.length; i += 1) {
-    deltaSum += values[i] - values[i - 1];
-  }
-  const avgDelta = deltaSum / windowSize;
-
-  const out = [];
-  let prev = values[values.length - 1];
-  for (let i = 0; i < months; i += 1) {
-    prev = Math.max(0, prev + avgDelta);
-    out.push({ step: i + 1, value: prev });
-  }
-  return out;
-}
-
 function getDefaultZipAnalytics(zip) {
-  const now = new Date();
   return {
     zip,
-    city: 'Dallas',
-    state: 'TX',
-    medianHomePrice: 0,
-    avgPricePerSqft: 0,
-    lastUpdated: formatLastUpdated(now),
+    city: '',
+    state: '',
+    medianHomePrice: null,
+    avgPricePerSqft: null,
+    lastUpdated: '--/--/----',
     homePriceHistorical: [],
     homePriceForecast: [],
     sqftHistorical: [],
@@ -160,10 +134,21 @@ function parseRow(header, line) {
   return row;
 }
 
-function loadAnalyticsMap() {
-  if (analyticsPromise) return analyticsPromise;
+function getWindowKey(years) {
+  return years <= 3 ? 'recent_3y' : 'long_10y';
+}
 
-  analyticsPromise = Promise.resolve().then(async () => {
+function getDatasetUrlForYears(years) {
+  return years <= 3 ? recentDatasetUrl : longDatasetUrl;
+}
+
+function loadAnalyticsMap(years = 3) {
+  const windowKey = getWindowKey(years);
+  const existing = analyticsPromiseByWindow.get(windowKey);
+  if (existing) return existing;
+
+  const nextPromise = Promise.resolve().then(async () => {
+    const datasetUrl = getDatasetUrlForYears(years);
     const lines = [];
     const text = await fetch(datasetUrl).then((res) => res.text());
     const rawLines = text.split(/\r?\n/);
@@ -207,13 +192,6 @@ function loadAnalyticsMap() {
       const monthBuckets = [...months.values()].sort((a, b) => a.date - b.date);
       if (!monthBuckets.length) return;
 
-      const homeSeriesRaw = monthBuckets
-        .map((m) => median(m.zipMedianPrices) ?? median(m.salePrices))
-        .filter((v) => v != null);
-      const sqftSeriesRaw = monthBuckets
-        .map((m) => median(m.pricePerSqftValues))
-        .filter((v) => v != null);
-
       const homeHistoryBuckets = monthBuckets.slice(-13);
       const homePriceHistorical = homeHistoryBuckets
         .map((m) => ({
@@ -231,44 +209,35 @@ function loadAnalyticsMap() {
         .filter((d) => d.value > 0);
 
       const lastMonth = monthBuckets[monthBuckets.length - 1].date;
-      const homeForecastRaw = deriveForecast(homeSeriesRaw.slice(-13), 12);
-      const sqftForecastRaw = deriveForecast(sqftSeriesRaw.slice(-13), 12);
 
-      const homePriceForecast = homeForecastRaw.map((p) => {
-        const d = new Date(Date.UTC(lastMonth.getUTCFullYear(), lastMonth.getUTCMonth() + p.step, 1));
-        return { date: formatMonthLabel(d), value: Math.round(p.value) };
-      });
-
-      const sqftForecast = sqftForecastRaw.map((p) => {
-        const d = new Date(Date.UTC(lastMonth.getUTCFullYear(), lastMonth.getUTCMonth() + p.step, 1));
-        return { date: formatMonthLabel(d), value: Math.round(p.value) };
-      });
-
-      const latestHomePrice = homePriceHistorical.at(-1)?.value ?? 0;
-      const latestSqft = sqftHistorical.at(-1)?.value ?? 0;
+      const latestHomePrice = homePriceHistorical.at(-1)?.value ?? null;
+      const latestSqft = sqftHistorical.at(-1)?.value ?? null;
 
       analyticsByZip.set(zip, {
         zip,
-        city: monthBuckets[monthBuckets.length - 1].city || 'Dallas',
-        state: monthBuckets[monthBuckets.length - 1].state || 'TX',
+        city: monthBuckets[monthBuckets.length - 1].city || '',
+        state: monthBuckets[monthBuckets.length - 1].state || '',
         medianHomePrice: latestHomePrice,
         avgPricePerSqft: latestSqft,
         lastUpdated: formatLastUpdated(lastMonth),
         homePriceHistorical,
-        homePriceForecast,
+        homePriceForecast: [],
         sqftHistorical,
-        sqftForecast,
+        sqftForecast: [],
       });
     });
 
     return analyticsByZip;
   });
 
-  return analyticsPromise;
+  analyticsPromiseByWindow.set(windowKey, nextPromise);
+  return nextPromise;
 }
 
-export async function getZipAnalytics(zip) {
-  const analyticsByZip = await loadAnalyticsMap();
+export async function getZipAnalytics(zip, options = {}) {
+  const requestedYears = Number(options.timeRangeYears);
+  const years = Number.isFinite(requestedYears) && requestedYears > 0 ? requestedYears : 3;
+  const analyticsByZip = await loadAnalyticsMap(years);
   return analyticsByZip.get(String(zip)) ?? getDefaultZipAnalytics(String(zip));
 }
 

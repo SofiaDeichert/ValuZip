@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { runPropertyAnalysis } from '../utils/propertyAnalysis';
+import { runPropertyAnalysis, parseTimeRangeYears } from '../utils/propertyAnalysis';
+import load10yrData from '../utils/load10yrData';
+import loadRecent3yrData from '../utils/loadRecent3yrData';
 
 const PRICE_FLOOR = 0;
 const PRICE_CEILING = 10000000;
 const PRICE_STEP = 50000;
 const SQFT_FLOOR = 0;
 const SQFT_CEILING = 10000;
-const HISTOGRAM_BARS = [
-  8, 12, 16, 22, 30, 36, 44, 52, 60, 66, 72, 78, 82, 86, 90, 94, 98, 96, 92, 88, 84, 78, 72, 66,
-  58, 50, 42, 36, 30, 26, 22, 18, 16, 14, 12, 10,
-];
+const PRICE_HISTOGRAM_BINS = 36;
 
 export default function PropertyForm({ selectedZip, setSelectedZip }) {
   const navigate = useNavigate();
@@ -47,6 +46,9 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
   const [activePriceHandle, setActivePriceHandle] = useState(null);
   const [submitError, setSubmitError] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [priceHistogramHeights, setPriceHistogramHeights] = useState(
+    Array(PRICE_HISTOGRAM_BINS).fill(0),
+  );
   const bedsBathsRef = useRef(null);
   const priceRef = useRef(null);
   const sqftRef = useRef(null);
@@ -301,6 +303,63 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
   }, [selectedZip]);
 
   useEffect(() => {
+    let alive = true;
+
+    async function computeHistogram() {
+      const normalizeZip = (zip) =>
+        String(zip || '').replace(/\D/g, '').slice(0, 5);
+
+      const zipNorm = normalizeZip(formData.zip);
+      const bins = PRICE_HISTOGRAM_BINS;
+
+      const empty = Array(bins).fill(0);
+      if (!zipNorm || zipNorm.length !== 5) {
+        if (alive) setPriceHistogramHeights(empty);
+        return;
+      }
+
+      const years = parseTimeRangeYears(formData.timeRange);
+      const cutoff = new Date();
+      cutoff.setFullYear(cutoff.getFullYear() - years);
+      cutoff.setHours(0, 0, 0, 0);
+
+      const rows = years <= 3 ? await loadRecent3yrData() : await load10yrData();
+
+      const binWidth = (PRICE_CEILING - PRICE_FLOOR) / bins;
+      const counts = Array(bins).fill(0);
+
+      for (let i = 0; i < rows.length; i += 1) {
+        const r = rows[i];
+        if (r.zip_code !== zipNorm) continue;
+        if (!(r.date instanceof Date) || r.date < cutoff) continue;
+
+        const p = r.sale_price;
+        if (!Number.isFinite(p) || p <= 0) continue;
+
+        const clamped = Math.min(PRICE_CEILING, Math.max(PRICE_FLOOR, p));
+        const idx = Math.min(
+          bins - 1,
+          Math.floor((clamped - PRICE_FLOOR) / binWidth),
+        );
+        counts[idx] += 1;
+      }
+
+      const maxCount = Math.max(...counts);
+      const heights = counts.map((c) => (maxCount > 0 ? (c / maxCount) * 100 : 0));
+      if (alive) setPriceHistogramHeights(heights);
+    }
+
+    computeHistogram().catch(() => {
+      if (!alive) return;
+      setPriceHistogramHeights(Array(PRICE_HISTOGRAM_BINS).fill(0));
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, [formData.zip, formData.timeRange]);
+
+  useEffect(() => {
     if (!isBedsBathsOpen) return;
 
     const handleClickOutside = (event) => {
@@ -415,7 +474,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
         return;
       }
       if (result.zip) {
-        navigate(`/zip/${result.zip}`, { state: { propertyAnalysis: result } });
+        navigate(`/zip/${result.zip}`);
         return;
       }
       setSubmitError(result.message || 'Analysis could not be completed.');
@@ -768,8 +827,9 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
 
                   <div ref={priceHistogramRef} className="relative h-28 select-none rounded-lg border border-gray-200 bg-gray-50/80 px-2.5 py-2.5">
                     <div className="absolute inset-x-2.5 bottom-2.5 top-2.5 flex items-end gap-[3px]">
-                      {HISTOGRAM_BARS.map((height, index) => {
-                        const barCenterPercent = ((index + 0.5) / HISTOGRAM_BARS.length) * 100;
+                      {priceHistogramHeights.map((height, index) => {
+                        const barCenterPercent =
+                          ((index + 0.5) / priceHistogramHeights.length) * 100;
                         const inSelectedRange =
                           barCenterPercent >= minPercent && barCenterPercent <= maxPercent;
                         return (

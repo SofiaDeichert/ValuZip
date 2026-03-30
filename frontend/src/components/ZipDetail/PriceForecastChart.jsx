@@ -16,6 +16,7 @@ export default function PriceForecastChart({
   const [horizon, setHorizon] = useState(12);
 
   const fmtTooltip = tooltipFormatter || yAxisFormatter;
+  const hasForecast = forecastData.some((d) => Number.isFinite(d?.value));
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -26,9 +27,99 @@ export default function PriceForecastChart({
   }, []);
 
   useEffect(() => {
-    if (!instanceRef.current || !historicalData.length) return;
+    if (!instanceRef.current) return;
 
-    const slicedForecast = forecastData.slice(0, horizon);
+    // When switching ZIPs, we must clear the chart if there's no historical data
+    // yet; otherwise ECharts can keep showing the previous ZIP's series.
+    if (!historicalData.length) {
+      const option = {
+        backgroundColor: 'transparent',
+        grid: {
+          top: 24,
+          right: 24,
+          bottom: 56,
+          left: 48,
+          containLabel: true,
+        },
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: '#fff',
+          borderColor: '#e5e7eb',
+          borderWidth: 1,
+          textStyle: { color: '#111827', fontSize: 12, fontFamily: 'inherit' },
+          formatter: () => '',
+        },
+        xAxis: {
+          type: 'category',
+          data: [],
+          boundaryGap: false,
+          name: xAxisLabel,
+          nameLocation: 'middle',
+          nameGap: 36,
+          nameTextStyle: { fontSize: 12, color: '#9ca3af', fontWeight: 500 },
+          axisLine: { lineStyle: { color: '#e5e7eb' } },
+          axisTick: { show: false },
+          axisLabel: {
+            fontSize: 12,
+            color: '#9ca3af',
+            interval: 0,
+          },
+        },
+        yAxis: {
+          type: 'value',
+          name: yAxisLabel,
+          nameLocation: 'middle',
+          nameGap: 56,
+          nameRotate: 90,
+          nameTextStyle: { fontSize: 12, color: '#9ca3af', fontWeight: 500 },
+          axisLabel: {
+            fontSize: 12,
+            color: '#9ca3af',
+            formatter: yAxisFormatter,
+          },
+          splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
+          axisLine: { show: false },
+          axisTick: { show: false },
+        },
+        series: [
+          {
+            name: 'Actual',
+            type: 'line',
+            data: [],
+            connectNulls: false,
+            smooth: true,
+            symbol: 'none',
+            lineStyle: { color, width: 2.5, type: 'solid' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: color + '28' },
+                { offset: 1, color: color + '00' },
+              ]),
+            },
+          },
+          {
+            name: 'Predicted',
+            type: 'line',
+            data: [],
+            connectNulls: false,
+            smooth: true,
+            symbol: 'none',
+            lineStyle: { color: lightColor, width: 2.5, type: 'dashed', opacity: 0.65 },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: lightColor + '18' },
+                { offset: 1, color: lightColor + '00' },
+              ]),
+            },
+          },
+        ],
+      };
+
+      instanceRef.current.setOption(option, true);
+      return;
+    }
+
+    const slicedForecast = hasForecast ? forecastData.slice(0, horizon) : [];
     const historicalDates = historicalData.map((d) => d.date);
     const forecastDates = slicedForecast.map((d) => d.date);
     const allDates = [...historicalDates, ...forecastDates];
@@ -67,7 +158,7 @@ export default function PriceForecastChart({
           const visible = params.filter((p) => {
             if (p.value == null) return false;
             // Hide "Actual" at the bridge point so only Predicted shows
-            if (p.seriesName === 'Actual' && p.dataIndex === bridgeIndex)
+            if (hasForecast && p.seriesName === 'Actual' && p.dataIndex === bridgeIndex)
               return false;
             return true;
           });
@@ -132,21 +223,25 @@ export default function PriceForecastChart({
             ]),
           },
         },
-        {
-          name: 'Predicted',
-          type: 'line',
-          data: predictedData,
-          connectNulls: false,
-          smooth: true,
-          symbol: 'none',
-          lineStyle: { color: lightColor, width: 2.5, type: 'dashed', opacity: 0.65 },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: lightColor + '18' },
-              { offset: 1, color: lightColor + '00' },
-            ]),
-          },
-        },
+        ...(hasForecast
+          ? [
+              {
+                name: 'Predicted',
+                type: 'line',
+                data: predictedData,
+                connectNulls: false,
+                smooth: true,
+                symbol: 'none',
+                lineStyle: { color: lightColor, width: 2.5, type: 'dashed', opacity: 0.65 },
+                areaStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: lightColor + '18' },
+                    { offset: 1, color: lightColor + '00' },
+                  ]),
+                },
+              },
+            ]
+          : []),
       ],
     };
 
@@ -161,6 +256,7 @@ export default function PriceForecastChart({
     fmtTooltip,
     xAxisLabel,
     yAxisLabel,
+    hasForecast,
   ]);
 
   useEffect(() => {
@@ -176,38 +272,42 @@ export default function PriceForecastChart({
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-md text-gray-400 font-medium">
-          Forecast horizon
-        </span>
-        <div className="flex items-center gap-1 bg-gray-100 rounded-full p-0.5">
-          {[3, 6, 12].map((h) => (
-            <button
-              key={h}
-              onClick={() => setHorizon(h)}
-              className={toggleClass(horizon === h)}
-            >
-              {h}mo
-            </button>
-          ))}
+      {hasForecast && (
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-md text-gray-400 font-medium">
+            Forecast horizon
+          </span>
+          <div className="flex items-center gap-1 bg-gray-100 rounded-full p-0.5">
+            {[3, 6, 12].map((h) => (
+              <button
+                key={h}
+                onClick={() => setHorizon(h)}
+                className={toggleClass(horizon === h)}
+              >
+                {h}mo
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex items-center gap-4 mb-2">
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-0.5 rounded" style={{ background: color }} />
           <span className="text-sm text-gray-400">Actual</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-5 h-0.5"
-            style={{
-              background: `repeating-linear-gradient(90deg,${lightColor} 0,${lightColor} 4px,transparent 4px,transparent 7px)`,
-              opacity: 0.65,
-            }}
-          />
-          <span className="text-sm text-gray-400">Predicted</span>
-        </div>
+        {hasForecast && (
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-5 h-0.5"
+              style={{
+                background: `repeating-linear-gradient(90deg,${lightColor} 0,${lightColor} 4px,transparent 4px,transparent 7px)`,
+                opacity: 0.65,
+              }}
+            />
+            <span className="text-sm text-gray-400">Predicted</span>
+          </div>
+        )}
       </div>
 
       <div ref={chartRef} style={{ width: '100%', height: '220px' }} />
