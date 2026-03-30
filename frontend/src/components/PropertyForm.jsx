@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { runPropertyAnalysis } from '../utils/propertyAnalysis';
 
 const PRICE_FLOOR = 0;
@@ -12,6 +13,7 @@ const HISTOGRAM_BARS = [
 ];
 
 export default function PropertyForm({ selectedZip, setSelectedZip }) {
+  const navigate = useNavigate();
   const defaultFormData = {
     zip: '',
     bedrooms: '',
@@ -43,7 +45,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     maxSqft: '',
   });
   const [activePriceHandle, setActivePriceHandle] = useState(null);
-  const [analysis, setAnalysis] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const bedsBathsRef = useRef(null);
   const priceRef = useRef(null);
@@ -402,37 +404,25 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const formatAnalysisCurrency = (value) => {
-    if (value == null || !Number.isFinite(value)) return '—';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatAnalysisPpsf = (value) => {
-    if (value == null || !Number.isFinite(value)) return '—';
-    return `${new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value)}/sq ft`;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setAnalysis(null);
+    setSubmitError(null);
     setAnalysisLoading(true);
     try {
       const result = await runPropertyAnalysis(formData);
-      setAnalysis(result);
+      if (!result.ok && result.error === 'validation') {
+        setSubmitError(result.message);
+        return;
+      }
+      if (result.zip) {
+        navigate(`/zip/${result.zip}`, { state: { propertyAnalysis: result } });
+        return;
+      }
+      setSubmitError(result.message || 'Analysis could not be completed.');
     } catch {
-      setAnalysis({
-        ok: false,
-        error: 'unknown',
-        message: 'Could not load sales data. Check your connection and try again.',
-      });
+      setSubmitError(
+        'Could not load sales data. Check your connection and try again.',
+      );
     } finally {
       setAnalysisLoading(false);
     }
@@ -448,7 +438,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     setIsSqftOpen(false);
     setActivePriceHandle(null);
     setSelectedZip('');
-    setAnalysis(null);
+    setSubmitError(null);
   };
 
   const normalizedPending = getNormalizedPendingPrice();
@@ -941,65 +931,10 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
           </button>
         </div>
 
-        {analysis && (
-          <div
-            className="mt-3 rounded-lg border border-gray-200/90 bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
-            role="region"
-            aria-live="polite"
-            aria-label="Analysis results"
-          >
-            {!analysis.ok ? (
-              <p className="text-sm font-medium text-amber-800">{analysis.message}</p>
-            ) : (
-              <>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Analysis results
-                </p>
-                <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                  <div>
-                    <dt className="text-gray-500">Estimated price</dt>
-                    <dd className="font-semibold text-gray-900">
-                      {formatAnalysisCurrency(analysis.estimatedPoint)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-gray-500">Estimated price range</dt>
-                    <dd className="font-semibold text-gray-900">
-                      {formatAnalysisCurrency(analysis.priceBandLow)} –{' '}
-                      {formatAnalysisCurrency(analysis.priceBandHigh)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-gray-500">ZIP median home price</dt>
-                    <dd className="font-semibold text-gray-900">
-                      {formatAnalysisCurrency(analysis.zipMedianHomePrice)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-gray-500">Avg price / sq ft</dt>
-                    <dd className="font-semibold text-gray-900">
-                      {formatAnalysisPpsf(analysis.avgPricePerSqft)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-gray-500">Comparable records</dt>
-                    <dd className="font-semibold text-gray-900 tabular-nums">
-                      {analysis.comparableCount.toLocaleString('en-US')}
-                    </dd>
-                  </div>
-                </dl>
-                {analysis.sqftBasedEstimate != null && Number.isFinite(analysis.sqftBasedEstimate) && (
-                  <p className="mt-2 text-xs text-gray-600">
-                    Size-adjusted check (avg $/sq ft × your sq ft range):{' '}
-                    <span className="font-semibold text-gray-800">
-                      {formatAnalysisCurrency(analysis.sqftBasedEstimate)}
-                    </span>
-                  </p>
-                )}
-                <p className="mt-2 text-xs leading-snug text-gray-600">{analysis.note}</p>
-              </>
-            )}
-          </div>
+        {submitError && (
+          <p className="mt-2 text-sm font-medium text-amber-800" role="alert">
+            {submitError}
+          </p>
         )}
       </div>
     </form>

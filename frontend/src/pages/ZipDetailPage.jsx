@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Map, { Source, Layer, Marker } from 'react-map-gl/mapbox';
 import centroid from '@turf/centroid';
@@ -29,9 +29,33 @@ function formatPrice(val) {
   return `$${val}`;
 }
 
+function formatAnalysisCurrency(value) {
+  if (value == null || !Number.isFinite(value)) return '—';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatAnalysisPpsf(value) {
+  if (value == null || !Number.isFinite(value)) return '—';
+  return `${new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)}/sq ft`;
+}
+
 export default function ZipDetailPage() {
   const { zip } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const passedAnalysis = location.state?.propertyAnalysis;
+  const propertyAnalysis =
+    passedAnalysis && String(passedAnalysis.zip) === String(zip)
+      ? passedAnalysis
+      : null;
   const [viewState, setViewState] = useState(null);
   const [geojson, setGeojson] = useState(null);
   const [zipFeature, setZipFeature] = useState(null);
@@ -235,6 +259,67 @@ export default function ZipDetailPage() {
                 {zip} · {zipAnalytics.city}, {zipAnalytics.state}
               </p>
             </div>
+
+            {propertyAnalysis && (
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <p className="text-md font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                  Property analysis
+                </p>
+                {!propertyAnalysis.ok ? (
+                  <p className="text-sm font-medium text-amber-800">
+                    {propertyAnalysis.message}
+                  </p>
+                ) : (
+                  <>
+                    <dl className="grid gap-3 text-sm sm:grid-cols-1">
+                      <div>
+                        <dt className="text-gray-500">Estimated price</dt>
+                        <dd className="font-semibold text-gray-900">
+                          {formatAnalysisCurrency(propertyAnalysis.estimatedPoint)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Estimated price range</dt>
+                        <dd className="font-semibold text-gray-900">
+                          {formatAnalysisCurrency(propertyAnalysis.priceBandLow)} –{' '}
+                          {formatAnalysisCurrency(propertyAnalysis.priceBandHigh)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">ZIP median home price</dt>
+                        <dd className="font-semibold text-gray-900">
+                          {formatAnalysisCurrency(propertyAnalysis.zipMedianHomePrice)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Avg price / sq ft</dt>
+                        <dd className="font-semibold text-gray-900">
+                          {formatAnalysisPpsf(propertyAnalysis.avgPricePerSqft)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Comparable records</dt>
+                        <dd className="font-semibold text-gray-900 tabular-nums">
+                          {propertyAnalysis.comparableCount.toLocaleString('en-US')}
+                        </dd>
+                      </div>
+                    </dl>
+                    {propertyAnalysis.sqftBasedEstimate != null &&
+                      Number.isFinite(propertyAnalysis.sqftBasedEstimate) && (
+                        <p className="mt-3 text-xs text-gray-600">
+                          Size-adjusted check (avg $/sq ft × your sq ft range):{' '}
+                          <span className="font-semibold text-gray-800">
+                            {formatAnalysisCurrency(propertyAnalysis.sqftBasedEstimate)}
+                          </span>
+                        </p>
+                      )}
+                    <p className="mt-3 text-xs leading-snug text-gray-600">
+                      {propertyAnalysis.note}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
 
             <div
               className="bg-gray-50 rounded-xl p-5 border border-gray-100 cursor-pointer transition-all duration-200 hover:shadow-sm hover:border-gray-200 hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-50"
