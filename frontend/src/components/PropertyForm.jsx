@@ -474,7 +474,29 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
         return;
       }
       if (result.zip) {
-        navigate(`/zip/${result.zip}`);
+        navigate(`/zip/${result.zip}`, {
+          state: {
+            analysisContext: {
+              entryPoint: 'analyze-property',
+              selectedFilters: {
+                zip: String(result.zip),
+                bedsBaths: {
+                  bedrooms: formData.bedrooms || '',
+                  bathrooms: formData.bathrooms || '',
+                },
+                sqft: {
+                  min: formData.minSqft === '' ? '' : Number(formData.minSqft),
+                  max: formData.maxSqft === '' ? '' : Number(formData.maxSqft),
+                },
+                priceRange: {
+                  min: formData.minPrice === '' ? '' : Number(formData.minPrice),
+                  max: formData.maxPrice === '' ? '' : Number(formData.maxPrice),
+                },
+                timeRange: formData.timeRange,
+              },
+            },
+          },
+        });
         return;
       }
       setSubmitError(result.message || 'Analysis could not be completed.');

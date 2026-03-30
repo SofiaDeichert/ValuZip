@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Map, { Source, Layer, Marker } from 'react-map-gl/mapbox';
 import centroid from '@turf/centroid';
@@ -7,6 +7,7 @@ import ZipMarkers from '../components/Map/ZipMarkers';
 import PriceForecastChart from '../components/ZipDetail/PriceForecastChart';
 import ZipSelect from '../components/ZipSelect';
 import { getZipAnalytics } from '../data/zipAnalytics';
+import { parseTimeRangeYears, runPropertyAnalysis } from '../utils/propertyAnalysis';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -30,14 +31,34 @@ function formatPrice(val) {
   return `$${val}`;
 }
 
+function toPropertyAnalysisForm(selectedFilters, zipFromRoute) {
+  return {
+    zip: String(selectedFilters?.zip || zipFromRoute || ''),
+    bedrooms: selectedFilters?.bedsBaths?.bedrooms ?? '',
+    bathrooms: selectedFilters?.bedsBaths?.bathrooms ?? '',
+    sqft: '',
+    minSqft: selectedFilters?.sqft?.min ?? '',
+    maxSqft: selectedFilters?.sqft?.max ?? '',
+    minPrice: selectedFilters?.priceRange?.min ?? '',
+    maxPrice: selectedFilters?.priceRange?.max ?? '',
+    timeRange: selectedFilters?.timeRange || 'Last 3 years',
+  };
+}
+
 export default function ZipDetailPage() {
   const { zip } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [viewState, setViewState] = useState(null);
   const [geojson, setGeojson] = useState(null);
   const [zipFeature, setZipFeature] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [activeChartModal, setActiveChartModal] = useState(null); // 'homePrice' | 'avgSqft' | null
+  const [propertyAnalysis, setPropertyAnalysis] = useState({
+    loading: false,
+    result: null,
+    error: null,
+  });
   const [zipAnalytics, setZipAnalytics] = useState({
     city: '',
     state: '',
@@ -49,6 +70,14 @@ export default function ZipDetailPage() {
     sqftHistorical: [],
     sqftForecast: [],
   });
+  const analysisContext = location.state?.analysisContext;
+  const selectedFilters = analysisContext?.selectedFilters ?? null;
+  const isAnalyzePropertyFlow =
+    analysisContext?.entryPoint === 'analyze-property' && Boolean(selectedFilters);
+  const selectedTimeRangeYears =
+    isAnalyzePropertyFlow && selectedFilters?.timeRange
+      ? parseTimeRangeYears(selectedFilters.timeRange)
+      : null;
 
   useEffect(() => {
     if (!activeChartModal) return;
@@ -96,14 +125,56 @@ export default function ZipDetailPage() {
 
   useEffect(() => {
     let alive = true;
-    getZipAnalytics(zip).then((data) => {
+    const analyticsOptions =
+      Number.isFinite(selectedTimeRangeYears) && selectedTimeRangeYears > 0
+        ? { timeRangeYears: selectedTimeRangeYears }
+        : undefined;
+
+    getZipAnalytics(zip, analyticsOptions).then((data) => {
       if (!alive) return;
       setZipAnalytics(data);
     });
     return () => {
       alive = false;
     };
-  }, [zip]);
+  }, [zip, selectedTimeRangeYears]);
+
+  useEffect(() => {
+    let alive = true;
+    if (!isAnalyzePropertyFlow) {
+      setPropertyAnalysis({ loading: false, result: null, error: null });
+      return;
+    }
+
+    setPropertyAnalysis({ loading: true, result: null, error: null });
+    const form = toPropertyAnalysisForm(selectedFilters, zip);
+
+    runPropertyAnalysis(form)
+      .then((analysis) => {
+        if (!alive) return;
+        if (analysis.ok) {
+          setPropertyAnalysis({ loading: false, result: analysis, error: null });
+        } else {
+          setPropertyAnalysis({
+            loading: false,
+            result: null,
+            error: analysis.message || 'Could not compute property analysis.',
+          });
+        }
+      })
+      .catch(() => {
+        if (!alive) return;
+        setPropertyAnalysis({
+          loading: false,
+          result: null,
+          error: 'Could not compute property analysis.',
+        });
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [isAnalyzePropertyFlow, selectedFilters, zip]);
 
   const highlightGeojson = zipFeature
     ? { type: 'FeatureCollection', features: [zipFeature] }
@@ -114,12 +185,53 @@ export default function ZipDetailPage() {
     : null;
 
   const cityStateText = [zipAnalytics.city, zipAnalytics.state].filter(Boolean).join(', ');
-  const homeDataContextText = zipAnalytics.homePriceHistorical.length
-    ? 'Based on recorded monthly sales data'
-    : 'Historical data unavailable';
-  const sqftDataContextText = zipAnalytics.sqftHistorical.length
-    ? 'Based on recorded monthly sales data'
-    : 'Historical data unavailable';
+
+  const propertyAnalysisResult =
+    isAnalyzePropertyFlow && propertyAnalysis.result?.ok ? propertyAnalysis.result : null;
+
+  const displayMedianHomePrice = (() => {
+    if (!isAnalyzePropertyFlow) return zipAnalytics.medianHomePrice;
+    if (propertyAnalysis.loading) return null;
+    if (propertyAnalysis.error) return null;
+    if (!propertyAnalysisResult) return null;
+    return (
+      propertyAnalysisResult.medianSalePrice ??
+      propertyAnalysisResult.zipMedianHomePrice ??
+      propertyAnalysisResult.estimatedPoint ??
+      null
+    );
+  })();
+
+  const displayAvgPricePerSqft = (() => {
+    if (!isAnalyzePropertyFlow) return zipAnalytics.avgPricePerSqft;
+    if (propertyAnalysis.loading) return null;
+    if (propertyAnalysis.error) return null;
+    if (
+      propertyAnalysisResult?.avgPricePerSqft == null ||
+      !Number.isFinite(propertyAnalysisResult.avgPricePerSqft)
+    ) {
+      return null;
+    }
+    return Math.round(propertyAnalysisResult.avgPricePerSqft);
+  })();
+
+  const homeDataContextText = (() => {
+    if (isAnalyzePropertyFlow && propertyAnalysis.loading) return 'Loading analysis…';
+    if (isAnalyzePropertyFlow && propertyAnalysis.error) return propertyAnalysis.error;
+    if (isAnalyzePropertyFlow && propertyAnalysisResult?.note) return propertyAnalysisResult.note;
+    return zipAnalytics.homePriceHistorical.length
+      ? 'Based on recorded monthly sales data'
+      : 'Historical data unavailable';
+  })();
+
+  const sqftDataContextText = (() => {
+    if (isAnalyzePropertyFlow && propertyAnalysis.loading) return 'Loading analysis…';
+    if (isAnalyzePropertyFlow && propertyAnalysis.error) return propertyAnalysis.error;
+    if (isAnalyzePropertyFlow && propertyAnalysisResult?.note) return propertyAnalysisResult.note;
+    return zipAnalytics.sqftHistorical.length
+      ? 'Based on recorded monthly sales data'
+      : 'Historical data unavailable';
+  })();
 
   const modalTitle =
     activeChartModal === 'homePrice'
@@ -279,7 +391,7 @@ export default function ZipDetailPage() {
                 </span>
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">
-                {formatPrice(zipAnalytics.medianHomePrice)}
+                {formatPrice(displayMedianHomePrice)}
               </div>
               <div className="mt-1 text-sm text-gray-600">
                 {homeDataContextText}
@@ -342,7 +454,7 @@ export default function ZipDetailPage() {
                 </span>
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-1">
-                {zipAnalytics.avgPricePerSqft == null ? '—' : `$${zipAnalytics.avgPricePerSqft}`}
+                {displayAvgPricePerSqft == null ? '—' : `$${displayAvgPricePerSqft}`}
               </div>
               <div className="mt-1 text-sm text-gray-600">
                 {sqftDataContextText}
