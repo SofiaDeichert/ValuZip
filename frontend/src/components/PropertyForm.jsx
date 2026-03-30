@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
+const PRICE_FLOOR = 0;
+const PRICE_CEILING = 2000000;
+const PRICE_STEP = 10000;
+const HISTOGRAM_BARS = [
+  8, 12, 16, 22, 30, 36, 44, 52, 60, 66, 72, 78, 82, 86, 90, 94, 98, 96, 92, 88, 84, 78, 72, 66,
+  58, 50, 42, 36, 30, 26, 22, 18, 16, 14, 12, 10,
+];
+
 export default function PropertyForm({ selectedZip, setSelectedZip }) {
   const [formData, setFormData] = useState({
     zip: selectedZip || '',
@@ -20,8 +28,10 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     minPrice: '',
     maxPrice: '',
   });
+  const [activePriceHandle, setActivePriceHandle] = useState(null);
   const bedsBathsRef = useRef(null);
   const priceRef = useRef(null);
+  const priceHistogramRef = useRef(null);
 
   const numericFields = new Set(['sqft', 'minPrice', 'maxPrice']);
 
@@ -51,6 +61,42 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     return `$${Math.round(amount)}`;
   };
 
+  const formatCompactPriceLabel = (value) => {
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount <= 0) return '$0';
+    if (amount >= 10000000) return '$10M+';
+    if (amount >= 1000000) {
+      const inMillions = amount / 1000000;
+      return `$${Number.isInteger(inMillions) ? inMillions : inMillions.toFixed(1)}M`;
+    }
+    return `$${Math.round(amount / 1000)}K`;
+  };
+
+  const clampPrice = (value) => {
+    if (!Number.isFinite(value)) return null;
+    return Math.min(PRICE_CEILING, Math.max(PRICE_FLOOR, value));
+  };
+
+  const sanitizePriceTextInput = (value) => {
+    if (value === '') return '';
+    const digitsOnly = String(value).replace(/[^\d]/g, '');
+    if (!digitsOnly) return '';
+    const parsed = Number(digitsOnly);
+    if (!Number.isFinite(parsed)) return '';
+    return parsed;
+  };
+
+  const getNormalizedPendingPrice = () => {
+    const rawMin = pendingPrice.minPrice === '' ? null : clampPrice(Number(pendingPrice.minPrice));
+    const rawMax = pendingPrice.maxPrice === '' ? null : clampPrice(Number(pendingPrice.maxPrice));
+
+    if (rawMin !== null && rawMax !== null && rawMin > rawMax) {
+      return { min: rawMin, max: rawMin };
+    }
+
+    return { min: rawMin, max: rawMax };
+  };
+
   const getPriceSummaryLabel = () => {
     const min = Number(formData.minPrice);
     const max = Number(formData.maxPrice);
@@ -58,9 +104,9 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     const hasMax = Number.isFinite(max) && max > 0;
 
     if (!hasMin && !hasMax) return 'Any Price';
-    if (!hasMin && hasMax) return `Under ${formatPriceLabel(max)}`;
-    if (hasMin && !hasMax) return `${formatPriceLabel(min)}+`;
-    return `${formatPriceLabel(min)}-${formatPriceLabel(max)}`;
+    if (!hasMin && hasMax) return `Under ${formatCompactPriceLabel(max)}`;
+    if (hasMin && !hasMax) return `${formatCompactPriceLabel(min)}+`;
+    return `${formatCompactPriceLabel(min)}-${formatCompactPriceLabel(max)}`;
   };
 
   const applyBedsBaths = () => {
@@ -73,12 +119,51 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
   };
 
   const applyPrice = () => {
+    const { min, max } = getNormalizedPendingPrice();
     setFormData((prev) => ({
       ...prev,
-      minPrice: pendingPrice.minPrice,
-      maxPrice: pendingPrice.maxPrice,
+      minPrice: min === null ? '' : min,
+      maxPrice: max === null ? '' : max,
     }));
     setIsPriceOpen(false);
+  };
+
+  const handlePendingMinInput = (value) => {
+    const sanitized = sanitizePriceTextInput(value);
+    if (sanitized === '') {
+      setPendingPrice((prev) => ({ ...prev, minPrice: '' }));
+      return;
+    }
+
+    const minValue = clampPrice(Number(sanitized));
+    setPendingPrice((prev) => {
+      const existingMax =
+        prev.maxPrice === '' ? null : clampPrice(Number(prev.maxPrice));
+      const nextMax = existingMax !== null && existingMax < minValue ? minValue : existingMax;
+      return {
+        minPrice: minValue,
+        maxPrice: nextMax === null ? '' : nextMax,
+      };
+    });
+  };
+
+  const handlePendingMaxInput = (value) => {
+    const sanitized = sanitizePriceTextInput(value);
+    if (sanitized === '') {
+      setPendingPrice((prev) => ({ ...prev, maxPrice: '' }));
+      return;
+    }
+
+    const maxValue = clampPrice(Number(sanitized));
+    setPendingPrice((prev) => {
+      const existingMin =
+        prev.minPrice === '' ? null : clampPrice(Number(prev.minPrice));
+      const nextMin = existingMin !== null && existingMin > maxValue ? maxValue : existingMin;
+      return {
+        minPrice: nextMin === null ? '' : nextMin,
+        maxPrice: maxValue,
+      };
+    });
   };
 
   useEffect(() => {
@@ -111,6 +196,52 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isPriceOpen]);
 
+  useEffect(() => {
+    if (!isPriceOpen || !activePriceHandle) return;
+
+    const updateFromPointer = (clientX) => {
+      if (!priceHistogramRef.current) return;
+      const rect = priceHistogramRef.current.getBoundingClientRect();
+      if (!rect.width) return;
+      const clampedX = Math.min(Math.max(clientX, rect.left), rect.right);
+      const percent = (clampedX - rect.left) / rect.width;
+      const rawValue = PRICE_FLOOR + percent * (PRICE_CEILING - PRICE_FLOOR);
+      const steppedValue = Math.round(rawValue / PRICE_STEP) * PRICE_STEP;
+      const nextValue = clampPrice(steppedValue);
+
+      setPendingPrice((prev) => {
+        const existingMin = prev.minPrice === '' ? null : clampPrice(Number(prev.minPrice));
+        const existingMax = prev.maxPrice === '' ? null : clampPrice(Number(prev.maxPrice));
+        const currentMin = existingMin ?? PRICE_FLOOR;
+        const currentMax = existingMax ?? PRICE_CEILING;
+
+        if (activePriceHandle === 'min') {
+          const nextMin = Math.min(nextValue, currentMax);
+          return {
+            minPrice: nextMin <= PRICE_FLOOR ? '' : nextMin,
+            maxPrice: existingMax === null ? '' : currentMax,
+          };
+        }
+
+        const nextMax = Math.max(nextValue, currentMin);
+        return {
+          minPrice: existingMin === null ? '' : currentMin,
+          maxPrice: nextMax >= PRICE_CEILING ? '' : nextMax,
+        };
+      });
+    };
+
+    const handleMouseMove = (event) => updateFromPointer(event.clientX);
+    const handleMouseUp = () => setActivePriceHandle(null);
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [activePriceHandle, isPriceOpen]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -128,6 +259,12 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     e.preventDefault();
     console.log('Property data submitted:', formData);
   };
+
+  const normalizedPending = getNormalizedPendingPrice();
+  const sliderMinValue = normalizedPending.min ?? PRICE_FLOOR;
+  const sliderMaxValue = normalizedPending.max ?? PRICE_CEILING;
+  const minPercent = ((sliderMinValue - PRICE_FLOOR) / (PRICE_CEILING - PRICE_FLOOR)) * 100;
+  const maxPercent = ((sliderMaxValue - PRICE_FLOOR) / (PRICE_CEILING - PRICE_FLOOR)) * 100;
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
@@ -266,33 +403,112 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                   minPrice: formData.minPrice,
                   maxPrice: formData.maxPrice,
                 });
+                setActivePriceHandle(null);
                 setIsPriceOpen((prev) => !prev);
               }}
               className="h-10 w-full rounded-full border border-gray-300 bg-white px-4 text-left text-sm text-gray-900 outline-none transition-all hover:border-gray-400 focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20"
             >
-              <span className="mr-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">
                 Price
               </span>
-              <span>{getPriceSummaryLabel()}</span>
+              <span className="block truncate text-sm font-medium text-gray-900">{getPriceSummaryLabel()}</span>
             </button>
 
             {isPriceOpen && (
-              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[300px] rounded-xl border border-gray-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.12)]">
+              <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[360px] rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.14)]">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Price Range</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {normalizedPending.min === null && normalizedPending.max === null
+                      ? 'Any Price'
+                      : `${normalizedPending.min === null ? '$0' : formatCompactPriceLabel(normalizedPending.min)} - ${
+                          normalizedPending.max === null ? formatPriceLabel(PRICE_CEILING) : formatPriceLabel(normalizedPending.max)
+                        }`}
+                  </p>
+                </div>
+
+                <div className="mb-3">
+                  <div className="mb-2 flex items-center justify-between text-xs font-medium text-gray-500">
+                    <span>{normalizedPending.min === null ? '$0' : formatCompactPriceLabel(normalizedPending.min)}</span>
+                    <span>{normalizedPending.max === null ? formatCompactPriceLabel(PRICE_CEILING) : formatCompactPriceLabel(normalizedPending.max)}</span>
+                  </div>
+
+                  <div ref={priceHistogramRef} className="relative h-24 select-none rounded-xl border border-gray-200 bg-gray-50/70 px-2 py-2">
+                    <div className="absolute inset-x-2 bottom-2 top-2 flex items-end gap-[3px]">
+                      {HISTOGRAM_BARS.map((height, index) => {
+                        const barCenterPercent = ((index + 0.5) / HISTOGRAM_BARS.length) * 100;
+                        const inSelectedRange =
+                          barCenterPercent >= minPercent && barCenterPercent <= maxPercent;
+                        return (
+                          <div
+                            key={`histogram-bar-${index}`}
+                            className={`flex-1 rounded-sm transition-colors ${
+                              inSelectedRange ? 'bg-[#006400]/55' : 'bg-gray-300/90'
+                            }`}
+                            style={{ height: `${height}%` }}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    <div
+                      className="absolute bottom-2 top-2 rounded-lg bg-[#006400]/12"
+                      style={{
+                        left: `${minPercent}%`,
+                        width: `${Math.max(maxPercent - minPercent, 1)}%`,
+                      }}
+                    />
+
+                    <div
+                      className="absolute bottom-2 top-2 w-[3px] -translate-x-1/2 rounded-full bg-[#006400]"
+                      style={{ left: `${minPercent}%` }}
+                    />
+                    <div
+                      className="absolute bottom-2 top-2 w-[3px] -translate-x-1/2 rounded-full bg-[#006400]"
+                      style={{ left: `${maxPercent}%` }}
+                    />
+
+                    <button
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        setActivePriceHandle('min');
+                      }}
+                      className={`absolute bottom-1 h-5 w-5 -translate-x-1/2 rounded-full border border-[#006400] bg-white shadow-[0_2px_6px_rgba(15,23,42,0.2)] transition ${
+                        activePriceHandle === 'min' ? 'ring-2 ring-[#006400]/30' : ''
+                      }`}
+                      style={{ left: `${minPercent}%` }}
+                      aria-label="Set minimum price"
+                    />
+                    <button
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        setActivePriceHandle('max');
+                      }}
+                      className={`absolute bottom-1 h-5 w-5 -translate-x-1/2 rounded-full border border-[#006400] bg-white shadow-[0_2px_6px_rgba(15,23,42,0.2)] transition ${
+                        activePriceHandle === 'max' ? 'ring-2 ring-[#006400]/30' : ''
+                      }`}
+                      style={{ left: `${maxPercent}%` }}
+                      aria-label="Set maximum price"
+                    />
+                  </div>
+
+                  <div className="mt-1 flex items-center justify-between text-[11px] font-medium text-gray-500">
+                    <span>$0</span>
+                    <span>{formatCompactPriceLabel(PRICE_CEILING)}</span>
+                  </div>
+                </div>
+
                 <div className="mb-3 grid grid-cols-2 gap-2.5">
                   <div>
                     <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
                       Min Price
                     </p>
                     <input
-                      type="number"
-                      min="0"
+                      type="text"
                       value={pendingPrice.minPrice}
-                      onChange={(e) =>
-                        setPendingPrice((prev) => ({
-                          ...prev,
-                          minPrice: sanitizeNumericInput(e.target.value),
-                        }))
-                      }
+                      onChange={(e) => handlePendingMinInput(e.target.value)}
                       placeholder="No Min"
                       className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
                     />
@@ -302,51 +518,13 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                       Max Price
                     </p>
                     <input
-                      type="number"
-                      min="0"
+                      type="text"
                       value={pendingPrice.maxPrice}
-                      onChange={(e) =>
-                        setPendingPrice((prev) => ({
-                          ...prev,
-                          maxPrice: sanitizeNumericInput(e.target.value),
-                        }))
-                      }
+                      onChange={(e) => handlePendingMaxInput(e.target.value)}
                       placeholder="No Max"
                       className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none transition-all focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20"
                     />
                   </div>
-                </div>
-
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {[
-                    { label: 'Under $300K', minPrice: '', maxPrice: 300000 },
-                    { label: '$300K-$600K', minPrice: 300000, maxPrice: 600000 },
-                    { label: '$600K-$1M', minPrice: 600000, maxPrice: 1000000 },
-                    { label: '$1M+', minPrice: 1000000, maxPrice: '' },
-                  ].map((option) => {
-                    const isActive =
-                      String(pendingPrice.minPrice) === String(option.minPrice) &&
-                      String(pendingPrice.maxPrice) === String(option.maxPrice);
-                    return (
-                      <button
-                        key={option.label}
-                        type="button"
-                        onClick={() =>
-                          setPendingPrice({
-                            minPrice: option.minPrice,
-                            maxPrice: option.maxPrice,
-                          })
-                        }
-                        className={`h-8 rounded-full px-3 text-xs font-medium transition ${
-                          isActive
-                            ? 'bg-[#006400] text-white'
-                            : 'border border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
                 </div>
 
                 <div className="flex items-center justify-between">
