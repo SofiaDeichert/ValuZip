@@ -4,6 +4,10 @@ import MapView from '../components/Map/MapView';
 
 const MapPage = () => {
   const [selectedZip, setSelectedZip] = useState('');
+  const zip = String(selectedZip || '').trim();
+  const contextLine = zip
+    ? `Showing results for ZIP ${zip}`
+    : 'Showing results based on your selected filters';
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden bg-gray-100">
@@ -13,6 +17,12 @@ const MapPage = () => {
             selectedZip={selectedZip}
             setSelectedZip={setSelectedZip}
           />
+          <p
+            className="mt-2 max-w-4xl text-xs leading-snug text-gray-500 sm:text-[13px]"
+            aria-live="polite"
+          >
+            {contextLine}
+          </p>
         </div>
       </div>
 

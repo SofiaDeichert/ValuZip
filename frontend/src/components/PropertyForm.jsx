@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { runPropertyAnalysis } from '../utils/propertyAnalysis';
 
 const PRICE_FLOOR = 0;
 const PRICE_CEILING = 10000000;
@@ -42,6 +43,8 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     maxSqft: '',
   });
   const [activePriceHandle, setActivePriceHandle] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
   const bedsBathsRef = useRef(null);
   const priceRef = useRef(null);
   const sqftRef = useRef(null);
@@ -75,26 +78,18 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
   const hasAnyActiveFilters =
     isZipActive || isBedsBathsActive || isSqftActive || isPriceActive || isTimeRangeActive;
 
+  const filterControlTransition =
+    'transition-[border-color,box-shadow,background-color] duration-200 ease-out';
+
   const getFilterControlClass = (isActive) =>
-    `h-12 w-full rounded-lg border bg-white px-4 text-left text-gray-900 outline-none transition-all duration-150 ${
+    `h-12 w-full rounded-lg border bg-white px-4 text-left text-gray-900 outline-none ${filterControlTransition} ${
       isActive
-        ? 'border-[#006400]/45 bg-[#006400]/[0.04] hover:border-[#006400]/55'
-        : 'border-gray-300 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)]'
-    } focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/20`;
+        ? 'border-[#006400]/45 bg-[#006400]/[0.04] shadow-[inset_0_0_0_1px_rgba(0,100,0,0.05)] hover:border-[#006400]/55 hover:shadow-[inset_0_0_0_1px_rgba(0,100,0,0.07),0_1px_2px_rgba(15,23,42,0.04)]'
+        : 'border-gray-200/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] hover:border-gray-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(15,23,42,0.03)]'
+    } focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/22 focus-visible:ring-offset-0`;
 
   const getFilterValueClass = (isActive) =>
     `block truncate text-base ${isActive ? 'font-bold text-gray-950' : 'font-semibold text-gray-900'}`;
-
-  const formatPriceLabel = (value) => {
-    const amount = Number(value);
-    if (!Number.isFinite(amount) || amount <= 0) return '';
-    if (amount >= 1000000) {
-      const inMillions = amount / 1000000;
-      return `$${Number.isInteger(inMillions) ? inMillions : inMillions.toFixed(1)}M`;
-    }
-    if (amount >= 1000) return `$${Math.round(amount / 1000)}K`;
-    return `$${Math.round(amount)}`;
-  };
 
   const formatCompactPriceLabel = (value) => {
     const amount = Number(value);
@@ -407,9 +402,40 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const formatAnalysisCurrency = (value) => {
+    if (value == null || !Number.isFinite(value)) return '—';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatAnalysisPpsf = (value) => {
+    if (value == null || !Number.isFinite(value)) return '—';
+    return `${new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value)}/sq ft`;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Property data submitted:', formData);
+    setAnalysis(null);
+    setAnalysisLoading(true);
+    try {
+      const result = await runPropertyAnalysis(formData);
+      setAnalysis(result);
+    } catch {
+      setAnalysis({
+        ok: false,
+        error: 'unknown',
+        message: 'Could not load sales data. Check your connection and try again.',
+      });
+    } finally {
+      setAnalysisLoading(false);
+    }
   };
 
   const handleClearAll = () => {
@@ -422,6 +448,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     setIsSqftOpen(false);
     setActivePriceHandle(null);
     setSelectedZip('');
+    setAnalysis(null);
   };
 
   const normalizedPending = getNormalizedPendingPrice();
@@ -432,7 +459,7 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="rounded-lg border border-gray-200 bg-gray-50/90 px-4 py-3.5 shadow-[0_5px_16px_rgba(15,23,42,0.08)]">
+      <div className="rounded-lg border border-gray-200/90 bg-gray-50/90 px-4 py-3.5 shadow-[0_5px_16px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.65)]">
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[160px] flex-1">
             <div className="relative">
@@ -454,11 +481,11 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 onChange={handleChange}
                 placeholder="e.g. 75201"
                 aria-label="ZIP code, 5 digits"
-                className={`h-12 w-full rounded-lg border pl-10 pr-4 pb-[8px] pt-4.5 text-base tabular-nums tracking-wide text-gray-900 outline-none transition-all duration-150 placeholder:text-gray-400 ${
+                className={`h-12 w-full rounded-lg border pl-10 pr-4 pb-[8px] pt-4.5 text-base tabular-nums tracking-wide text-gray-900 outline-none placeholder:text-gray-400 ${filterControlTransition} ${
                   isZipActive
-                    ? 'border-[#006400]/45 bg-[#006400]/[0.04] font-bold text-gray-950 hover:border-[#006400]/55'
-                    : 'border-gray-300 bg-white font-semibold hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)]'
-                } focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20`}
+                    ? 'border-[#006400]/45 bg-[#006400]/[0.04] font-bold text-gray-950 shadow-[inset_0_0_0_1px_rgba(0,100,0,0.05)] hover:border-[#006400]/55 hover:shadow-[inset_0_0_0_1px_rgba(0,100,0,0.07),0_1px_2px_rgba(15,23,42,0.04)]'
+                    : 'border-gray-200/95 bg-white font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] hover:border-gray-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(15,23,42,0.03)]'
+                } focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/22 focus-visible:ring-offset-0`}
               />
             </div>
           </div>
@@ -872,11 +899,11 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
                 name="timeRange"
                 value={formData.timeRange}
                 onChange={handleChange}
-                className={`h-12 w-full appearance-none rounded-lg border pb-[8px] pl-10 pr-10 pt-4.5 text-base outline-none transition-all duration-150 ${
+                className={`h-12 w-full appearance-none rounded-lg border pb-[8px] pl-10 pr-10 pt-4.5 text-base outline-none ${filterControlTransition} ${
                   isTimeRangeActive
-                    ? 'border-[#006400]/45 bg-[#006400]/[0.04] font-bold text-gray-950 hover:border-[#006400]/55'
-                    : 'border-gray-300 bg-white font-semibold text-gray-900 hover:border-gray-400 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)]'
-                } focus:border-[#006400] focus:ring-2 focus:ring-[#006400]/20`}
+                    ? 'border-[#006400]/45 bg-[#006400]/[0.04] font-bold text-gray-950 shadow-[inset_0_0_0_1px_rgba(0,100,0,0.05)] hover:border-[#006400]/55 hover:shadow-[inset_0_0_0_1px_rgba(0,100,0,0.07),0_1px_2px_rgba(15,23,42,0.04)]'
+                    : 'border-gray-200/95 bg-white font-semibold text-gray-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] hover:border-gray-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(15,23,42,0.03)]'
+                } focus-visible:border-[#006400] focus-visible:ring-2 focus-visible:ring-[#006400]/22 focus-visible:ring-offset-0`}
               >
                 <option>Last 1 year</option>
                 <option>Last 3 years</option>
@@ -894,9 +921,9 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
           <button
             type="button"
             onClick={handleClearAll}
-            className={`h-12 px-1 text-sm font-semibold transition ${
+            className={`h-12 rounded-md px-2 text-sm font-semibold transition-[color,background-color,box-shadow] duration-200 ease-out ${
               hasAnyActiveFilters
-                ? 'text-gray-600 hover:text-gray-800'
+                ? 'text-gray-600 hover:bg-gray-100/85 hover:text-gray-800 active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(249,250,251)]'
                 : 'cursor-default text-gray-400'
             }`}
             disabled={!hasAnyActiveFilters}
@@ -907,11 +934,73 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
 
           <button
             type="submit"
-            className="h-12 min-w-[170px] rounded-lg bg-[#006400] px-5 text-base font-semibold text-white transition-shadow hover:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.12)] active:shadow-[inset_0_0_0_9999px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            disabled={analysisLoading}
+            className="h-12 min-w-[170px] rounded-lg bg-[#006400] px-5 text-base font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.12)] transition-[box-shadow,transform,filter] duration-200 ease-out hover:shadow-[0_2px_6px_rgba(0,0,0,0.14),inset_0_0_0_9999px_rgba(0,0,0,0.06)] active:translate-y-px active:shadow-[0_1px_2px_rgba(0,0,0,0.14),inset_0_0_0_9999px_rgba(0,0,0,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006400]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:pointer-events-none disabled:opacity-60"
           >
-            Analyze Property
+            {analysisLoading ? 'Analyzing…' : 'Analyze Property'}
           </button>
         </div>
+
+        {analysis && (
+          <div
+            className="mt-3 rounded-lg border border-gray-200/90 bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+            role="region"
+            aria-live="polite"
+            aria-label="Analysis results"
+          >
+            {!analysis.ok ? (
+              <p className="text-sm font-medium text-amber-800">{analysis.message}</p>
+            ) : (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Analysis results
+                </p>
+                <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                  <div>
+                    <dt className="text-gray-500">Estimated price</dt>
+                    <dd className="font-semibold text-gray-900">
+                      {formatAnalysisCurrency(analysis.estimatedPoint)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Estimated price range</dt>
+                    <dd className="font-semibold text-gray-900">
+                      {formatAnalysisCurrency(analysis.priceBandLow)} –{' '}
+                      {formatAnalysisCurrency(analysis.priceBandHigh)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">ZIP median home price</dt>
+                    <dd className="font-semibold text-gray-900">
+                      {formatAnalysisCurrency(analysis.zipMedianHomePrice)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Avg price / sq ft</dt>
+                    <dd className="font-semibold text-gray-900">
+                      {formatAnalysisPpsf(analysis.avgPricePerSqft)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Comparable records</dt>
+                    <dd className="font-semibold text-gray-900 tabular-nums">
+                      {analysis.comparableCount.toLocaleString('en-US')}
+                    </dd>
+                  </div>
+                </dl>
+                {analysis.sqftBasedEstimate != null && Number.isFinite(analysis.sqftBasedEstimate) && (
+                  <p className="mt-2 text-xs text-gray-600">
+                    Size-adjusted check (avg $/sq ft × your sq ft range):{' '}
+                    <span className="font-semibold text-gray-800">
+                      {formatAnalysisCurrency(analysis.sqftBasedEstimate)}
+                    </span>
+                  </p>
+                )}
+                <p className="mt-2 text-xs leading-snug text-gray-600">{analysis.note}</p>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </form>
   );
