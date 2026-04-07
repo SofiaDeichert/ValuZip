@@ -22,7 +22,6 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     maxPrice: '',
     timeRange: 'Last 3 years',
   };
-
   const [formData, setFormData] = useState({
     ...defaultFormData,
     zip: selectedZip || '',
@@ -36,12 +35,10 @@ export default function PropertyForm({ selectedZip, setSelectedZip }) {
     bedrooms: '',
     bathrooms: '',
   });
-
   const [pendingPrice, setPendingPrice] = useState({
     minPrice: '',
     maxPrice: '',
   });
-
   const [pendingSqft, setPendingSqft] = useState({
     minSqft: '',
     maxSqft: '',
