@@ -1,5 +1,5 @@
-import recentDatasetUrl from './final_recent_3yrs.csv?url';
-import longDatasetUrl from './final_10yrs.csv?url';
+import datasetUrl from './FINAL_DATASET_TEXAS.csv?url';
+import ZIP_CITIES from './zip_cities.js';
 
 const NUMERIC_FIELDS = new Set([
   'sale_price',
@@ -134,21 +134,11 @@ function parseRow(header, line) {
   return row;
 }
 
-function getWindowKey(years) {
-  return years <= 3 ? 'recent_3y' : 'long_10y';
-}
-
-function getDatasetUrlForYears(years) {
-  return years <= 3 ? recentDatasetUrl : longDatasetUrl;
-}
-
-function loadAnalyticsMap(years = 3) {
-  const windowKey = getWindowKey(years);
-  const existing = analyticsPromiseByWindow.get(windowKey);
+function loadAnalyticsMap() {
+  const existing = analyticsPromiseByWindow.get('full');
   if (existing) return existing;
 
   const nextPromise = Promise.resolve().then(async () => {
-    const datasetUrl = getDatasetUrlForYears(years);
     const lines = [];
     const text = await fetch(datasetUrl).then((res) => res.text());
     const rawLines = text.split(/\r?\n/);
@@ -176,7 +166,8 @@ function loadAnalyticsMap(years = 3) {
         pricePerSqftValues: [],
       };
 
-      if (row.zip_median_price != null) bucket.zipMedianPrices.push(row.zip_median_price);
+      if (row.zip_median_price != null)
+        bucket.zipMedianPrices.push(row.zip_median_price);
       if (row.sale_price != null) bucket.salePrices.push(row.sale_price);
       if (row.sale_price != null && row.sqft != null && row.sqft > 0) {
         bucket.pricePerSqftValues.push(row.sale_price / row.sqft);
@@ -192,52 +183,63 @@ function loadAnalyticsMap(years = 3) {
       const monthBuckets = [...months.values()].sort((a, b) => a.date - b.date);
       if (!monthBuckets.length) return;
 
-      const homeHistoryBuckets = monthBuckets.slice(-13);
-      const homePriceHistorical = homeHistoryBuckets
-        .map((m) => ({
-          date: formatMonthLabel(m.date),
-          value: Math.round(median(m.zipMedianPrices) ?? median(m.salePrices) ?? 0),
-        }))
-        .filter((d) => d.value > 0);
-
-      const sqftHistoryBuckets = monthBuckets.slice(-13);
-      const sqftHistorical = sqftHistoryBuckets
-        .map((m) => ({
-          date: formatMonthLabel(m.date),
-          value: Math.round(median(m.pricePerSqftValues) ?? 0),
-        }))
-        .filter((d) => d.value > 0);
-
       const lastMonth = monthBuckets[monthBuckets.length - 1].date;
 
-      const latestHomePrice = homePriceHistorical.at(-1)?.value ?? null;
-      const latestSqft = sqftHistorical.at(-1)?.value ?? null;
-
+      // Store all monthly buckets — slicing to the requested window happens
+      // at query time in getZipAnalytics so a single cache serves all toggles.
       analyticsByZip.set(zip, {
         zip,
-        city: monthBuckets[monthBuckets.length - 1].city || '',
-        state: monthBuckets[monthBuckets.length - 1].state || '',
-        medianHomePrice: latestHomePrice,
-        avgPricePerSqft: latestSqft,
+        city: ZIP_CITIES[zip] || '',
+        state: ZIP_CITIES[zip] ? 'TX' : '',
         lastUpdated: formatLastUpdated(lastMonth),
-        homePriceHistorical,
-        homePriceForecast: [],
-        sqftHistorical,
-        sqftForecast: [],
+        allMonthBuckets: monthBuckets,
       });
     });
 
     return analyticsByZip;
   });
 
-  analyticsPromiseByWindow.set(windowKey, nextPromise);
+  analyticsPromiseByWindow.set('full', nextPromise);
   return nextPromise;
 }
 
 export async function getZipAnalytics(zip, options = {}) {
   const requestedYears = Number(options.timeRangeYears);
-  const years = Number.isFinite(requestedYears) && requestedYears > 0 ? requestedYears : 3;
-  const analyticsByZip = await loadAnalyticsMap(years);
-  return analyticsByZip.get(String(zip)) ?? getDefaultZipAnalytics(String(zip));
-}
+  const years =
+    Number.isFinite(requestedYears) && requestedYears > 0 ? requestedYears : 3;
 
+  const analyticsByZip = await loadAnalyticsMap();
+  const raw = analyticsByZip.get(String(zip));
+  if (!raw) return getDefaultZipAnalytics(String(zip));
+
+  // Slice to the requested window at query time so the single cache serves all toggles
+  const monthsToShow = years * 12;
+  const sliced = raw.allMonthBuckets.slice(-monthsToShow);
+
+  const homePriceHistorical = sliced
+    .map((m) => ({
+      date: formatMonthLabel(m.date),
+      value: Math.round(median(m.zipMedianPrices) ?? median(m.salePrices) ?? 0),
+    }))
+    .filter((d) => d.value > 0);
+
+  const sqftHistorical = sliced
+    .map((m) => ({
+      date: formatMonthLabel(m.date),
+      value: Math.round(median(m.pricePerSqftValues) ?? 0),
+    }))
+    .filter((d) => d.value > 0);
+
+  return {
+    zip: raw.zip,
+    city: raw.city,
+    state: raw.state,
+    lastUpdated: raw.lastUpdated,
+    medianHomePrice: homePriceHistorical.at(-1)?.value ?? null,
+    avgPricePerSqft: sqftHistorical.at(-1)?.value ?? null,
+    homePriceHistorical,
+    homePriceForecast: [],
+    sqftHistorical,
+    sqftForecast: [],
+  };
+}

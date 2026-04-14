@@ -7,7 +7,7 @@ class PredictionInput(BaseModel):
     baths: int
     sqft: int
     year: int
-    month: int
+    month: int  # 1-12; converted to quarter internally
 
 
 class PredictionOutput(BaseModel):
@@ -19,4 +19,3 @@ class PredictionOutput(BaseModel):
     year: int
     month: int
     predicted_price: float
-    
