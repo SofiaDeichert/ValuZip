@@ -22,6 +22,18 @@ const FORECAST_OPTIONS = [
 ];
 const DEFAULT_HISTORY_YEARS = 3;
 const DEFAULT_FORECAST_YEARS = 1;
+const MARKET_VIEW_OPTIONS = [
+  { label: 'Historical', value: 'historical' },
+  { label: 'Quarterly', value: 'quarterly' },
+];
+const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4'];
+const MIN_MEANINGFUL_QUARTERS = 2;
+
+function normalizeQuarterYear(value) {
+  if (value == null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 
 // ── Formatters ─────────────────────────────────────────────────────────────
 const priceTick = (v) => {
@@ -117,9 +129,50 @@ function Toggle({ options, value, onChange, label, insufficientYears }) {
   );
 }
 
+function ViewToggle({ options, value, onChange, label }) {
+  return (
+    <div
+      className="flex items-center gap-2"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      {label && (
+        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">
+          {label}
+        </span>
+      )}
+      <div className="flex items-center gap-0.5 bg-gray-100 rounded-full p-0.5">
+        {options.map(({ label: optLabel, value: optValue }) => {
+          const isSelected = value === optValue;
+          return (
+            <button
+              key={optValue}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(optValue);
+              }}
+              className={
+                isSelected
+                  ? 'px-3 py-1 rounded-full text-xs font-semibold bg-gray-900 text-white transition-colors'
+                  : 'px-3 py-1 rounded-full text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors'
+              }
+            >
+              {optLabel}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── ECharts wrapper ─────────────────────────────────────────────────────────
 const LineChart = memo(function LineChart({
   historicalData = [],
+  quarterlySeries = [],
+  isQuarterlyView = false,
+  selectedQuarterlyYear = null,
   forecastData = [],
   color,
   forecastColor,
@@ -131,6 +184,16 @@ const LineChart = memo(function LineChart({
   const inst = useRef(null);
   const fmt = tooltipFormatter || yFormatter;
   const hasForecast = forecastData.some((d) => Number.isFinite(d?.value));
+  const hasQuarterlySeries = quarterlySeries.some((s) =>
+    Array.isArray(s?.data) && s.data.some((v) => Number.isFinite(v)),
+  );
+  const filteredQuarterlySeries = isQuarterlyView
+    ? quarterlySeries.filter((series) => {
+        const year = normalizeQuarterYear(series?.year);
+        if (!Number.isFinite(year)) return false;
+        return year === selectedQuarterlyYear;
+      })
+    : [];
 
   useEffect(() => {
     if (!ref.current) return;
@@ -140,6 +203,65 @@ const LineChart = memo(function LineChart({
 
   useEffect(() => {
     if (!inst.current) return;
+
+    if (isQuarterlyView) {
+      inst.current.setOption(
+        {
+          animation: true,
+          animationDuration: 500,
+          animationEasing: 'cubicInOut',
+          backgroundColor: 'transparent',
+          grid: { top: 42, right: 16, bottom: 48, left: 44, containLabel: true },
+          legend: { show: false },
+          tooltip: {
+            trigger: 'axis',
+            backgroundColor: '#fff',
+            borderColor: '#e5e7eb',
+            borderWidth: 1,
+            textStyle: { color: '#111827', fontSize: 12, fontFamily: 'inherit' },
+            formatter(params) {
+              const visible = params.filter((p) => p.value != null);
+              if (!visible.length) return '';
+              const rows = visible.map(
+                (p) => `${p.marker}<b>${p.seriesName}</b>: ${fmt(p.value)}`,
+              );
+              return `<div style="font-size:12px;padding:2px 4px"><div style="color:#6b7280;margin-bottom:3px">${params[0].axisValue}</div>${rows.join('<br/>')}</div>`;
+            },
+          },
+          xAxis: {
+            type: 'category',
+            data: QUARTER_LABELS,
+            boundaryGap: false,
+            axisLine: { lineStyle: { color: '#e5e7eb' } },
+            axisTick: { show: false },
+            axisLabel: { fontSize: 11, color: '#9ca3af' },
+          },
+          yAxis: {
+            type: 'value',
+            axisLabel: { fontSize: 11, color: '#9ca3af', formatter: yFormatter },
+            splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
+            axisLine: { show: false },
+            axisTick: { show: false },
+          },
+          series: filteredQuarterlySeries.map((series) => ({
+            name: series.year,
+            type: 'line',
+            data: series.data,
+            connectNulls: true,
+            smooth: false,
+            symbol: 'circle',
+            symbolSize: 6,
+            lineStyle: {
+              width: 2.8,
+              opacity: 1,
+            },
+            emphasis: { focus: 'series' },
+          })),
+        },
+        false,
+      );
+      return;
+    }
 
     const histDates = historicalData.map((d) => d.date);
     const fcDates = hasForecast ? forecastData.map((d) => d.date) : [];
@@ -263,6 +385,10 @@ const LineChart = memo(function LineChart({
       false, // merge (not replace) → enables smooth update animation
     );
   }, [
+    isQuarterlyView,
+    quarterlySeries,
+    filteredQuarterlySeries,
+    selectedQuarterlyYear,
     historicalData,
     forecastData,
     color,
@@ -280,24 +406,29 @@ const LineChart = memo(function LineChart({
 
   return (
     <div className="w-full">
-      <div className="flex items-center gap-4 mb-2">
-        <div className="flex items-center gap-1.5">
-          <div className="w-5 h-0.5 rounded" style={{ background: color }} />
-          <span className="text-xs text-gray-400">Historical</span>
-        </div>
-        {hasForecast && (
+      {!isQuarterlyView && (
+        <div className="flex items-center gap-4 mb-2">
           <div className="flex items-center gap-1.5">
-            <div
-              className="w-5 h-0.5"
-              style={{
-                background: `repeating-linear-gradient(90deg,${forecastColor || color} 0,${forecastColor || color} 4px,transparent 4px,transparent 7px)`,
-                opacity: 0.7,
-              }}
-            />
-            <span className="text-xs text-gray-400">ML Forecast</span>
+            <div className="w-5 h-0.5 rounded" style={{ background: color }} />
+            <span className="text-xs text-gray-400">Historical</span>
           </div>
-        )}
-      </div>
+          {hasForecast && (
+            <div className="flex items-center gap-1.5">
+              <div
+                className="w-5 h-0.5"
+                style={{
+                  background: `repeating-linear-gradient(90deg,${forecastColor || color} 0,${forecastColor || color} 4px,transparent 4px,transparent 7px)`,
+                  opacity: 0.7,
+                }}
+              />
+              <span className="text-xs text-gray-400">ML Forecast</span>
+            </div>
+          )}
+        </div>
+      )}
+      {isQuarterlyView && !hasQuarterlySeries && (
+        <p className="text-xs text-gray-400 mb-2">No quarterly data available.</p>
+      )}
       <div ref={ref} style={{ width: '100%', height }} />
     </div>
   );
@@ -321,6 +452,8 @@ const ChartCard = memo(function ChartCard({
   statusNote,
   statusNoteTone = 'info',
   historicalData,
+  quarterlySeries = [],
+  isQuarterlyView = false,
   forecastData: fcData,
   color,
   forecastColor,
@@ -406,6 +539,8 @@ const ChartCard = memo(function ChartCard({
       {/* Chart */}
       <LineChart
         historicalData={historicalData}
+        quarterlySeries={quarterlySeries}
+        isQuarterlyView={isQuarterlyView}
         forecastData={fcData}
         color={color}
         forecastColor={forecastColor}
@@ -464,6 +599,8 @@ export default function ZipDetailPage() {
     DEFAULT_HISTORY_YEARS,
   );
   const [forecastYears, setForecastYears] = useState(DEFAULT_FORECAST_YEARS);
+  const [marketViewMode, setMarketViewMode] = useState('historical');
+  const [marketQuarterlyYear, setMarketQuarterlyYear] = useState(null);
 
   // City/state loaded once on zip change — independent of history toggles
   const [cityState, setCityState] = useState({
@@ -476,6 +613,7 @@ export default function ZipDetailPage() {
   const [marketAnalytics, setMarketAnalytics] = useState({
     lastUpdated: '--/--/----',
     historical: [],
+    quarterly: [],
   });
 
   // Holds last-good data so charts never receive [] while a fetch is in-flight
@@ -562,10 +700,12 @@ export default function ZipDetailPage() {
       (data) => {
         if (!alive) return;
         const hist = data.homePriceHistorical;
+        const quarterly = data.homePriceQuarterly || [];
         if (hist.length) prevMarketHistorical.current = hist;
         setMarketAnalytics({
           lastUpdated: data.lastUpdated,
           historical: hist.length ? hist : prevMarketHistorical.current,
+          quarterly,
         });
       },
     );
@@ -731,6 +871,44 @@ export default function ZipDetailPage() {
   const handleExpand = useCallback((key) => setActiveModal(key), []);
 
   const marketLatestPrice = marketAnalytics.historical.at(-1)?.value ?? null;
+  const marketChartData = marketAnalytics.historical;
+  const availableQuarterlyYears = marketAnalytics.quarterly
+    .map((series) => {
+      const year = normalizeQuarterYear(series?.year);
+      if (!Number.isFinite(year)) return null;
+      const coverage = Array.isArray(series?.data)
+        ? series.data.filter((value) => Number.isFinite(value)).length
+        : 0;
+      return { year, coverage };
+    })
+    .filter((entry) => entry != null)
+    .sort((a, b) => a.year - b.year);
+  const availableQuarterYears = availableQuarterlyYears.map((entry) => entry.year);
+  const latestMeaningfulQuarterlyYear =
+    [...availableQuarterlyYears]
+      .reverse()
+      .find((entry) => entry.coverage >= MIN_MEANINGFUL_QUARTERS)?.year ?? null;
+  const latestQuarterlyYear = availableQuarterYears.at(-1) ?? null;
+  const defaultQuarterlyYear = latestMeaningfulQuarterlyYear ?? latestQuarterlyYear;
+  const marketQuarterlySelectedYear =
+    marketQuarterlyYear ?? defaultQuarterlyYear ?? null;
+
+  useEffect(() => {
+    if (!availableQuarterYears.length) {
+      setMarketQuarterlyYear(null);
+      return;
+    }
+    if (!availableQuarterYears.includes(marketQuarterlySelectedYear)) {
+      setMarketQuarterlyYear(defaultQuarterlyYear);
+    }
+  }, [availableQuarterYears, marketQuarterlySelectedYear, defaultQuarterlyYear]);
+
+  const handleMarketViewChange = useCallback((nextMode) => {
+    setMarketViewMode(nextMode);
+    if (nextMode === 'quarterly') {
+      setActiveModal('market');
+    }
+  }, []);
   const propertyLatestPrice = hasPrediction ? prediction.predictedPrice : null;
   const propertyHistoryStatusNote =
     hasPrediction &&
@@ -887,18 +1065,34 @@ export default function ZipDetailPage() {
               title="ZIP Market Trend"
               subtitle="ZIP median price across all property types"
               headerRight={
-                <Toggle
-                  options={HISTORY_OPTIONS}
-                  value={marketHistoryYears}
-                  onChange={setMarketHistoryYears}
-                  label="History"
-                />
+                <div className="flex flex-row items-center gap-6">
+                  <ViewToggle
+                    options={MARKET_VIEW_OPTIONS}
+                    value={marketViewMode}
+                    onChange={handleMarketViewChange}
+                    label="View"
+                  />
+                  <div className="w-px h-4 bg-gray-200" />
+                  <Toggle
+                    options={HISTORY_OPTIONS}
+                    value={marketHistoryYears}
+                    onChange={setMarketHistoryYears}
+                    label="History"
+                  />
+                </div>
               }
               value={formatPrice(marketLatestPrice)}
               valueLabel="Latest ZIP median price"
-              historicalData={marketAnalytics.historical}
+              historicalData={marketChartData}
+              quarterlySeries={marketAnalytics.quarterly}
+              isQuarterlyView={false}
               forecastData={[]}
               color="#006400"
+              statusNote={
+                marketViewMode === 'quarterly'
+                  ? 'Quarterly analysis opens in expanded view for a cleaner seasonal breakdown.'
+                  : null
+              }
             />
 
             {/* ── Chart 2: Your Property Estimate ── */}
@@ -1023,12 +1217,20 @@ export default function ZipDetailPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   {activeModal === 'market' && (
-                    <Toggle
-                      options={HISTORY_OPTIONS}
-                      value={marketHistoryYears}
-                      onChange={setMarketHistoryYears}
-                      label="History"
-                    />
+                    <div className="flex items-center gap-3">
+                      <ViewToggle
+                        options={MARKET_VIEW_OPTIONS}
+                        value={marketViewMode}
+                        onChange={handleMarketViewChange}
+                        label="View"
+                      />
+                      <Toggle
+                        options={HISTORY_OPTIONS}
+                        value={marketHistoryYears}
+                        onChange={setMarketHistoryYears}
+                        label="History"
+                      />
+                    </div>
                   )}
                   {activeModal === 'property' && (
                     <div className="flex items-center gap-3">
@@ -1066,14 +1268,41 @@ export default function ZipDetailPage() {
               </div>
               <div className="p-6 overflow-y-auto">
                 {activeModal === 'market' && (
-                  <LineChart
-                    historicalData={marketAnalytics.historical}
-                    forecastData={[]}
-                    color="#006400"
-                    yFormatter={priceTick}
-                    tooltipFormatter={priceTooltip}
-                    height={360}
-                  />
+                  <>
+                    {marketViewMode === 'quarterly' && (
+                      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Year
+                        </label>
+                        <select
+                          value={marketQuarterlySelectedYear ?? ''}
+                          onChange={(e) =>
+                            setMarketQuarterlyYear(
+                              normalizeQuarterYear(e.target.value),
+                            )
+                          }
+                          className="h-9 min-w-[110px] rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 outline-none transition focus:border-gray-400"
+                        >
+                          {availableQuarterYears.map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <LineChart
+                      historicalData={marketChartData}
+                      quarterlySeries={marketAnalytics.quarterly}
+                      isQuarterlyView={marketViewMode === 'quarterly'}
+                      selectedQuarterlyYear={marketQuarterlySelectedYear}
+                      forecastData={[]}
+                      color="#006400"
+                      yFormatter={priceTick}
+                      tooltipFormatter={priceTooltip}
+                      height={360}
+                    />
+                  </>
                 )}
                 {activeModal === 'property' && hasPrediction && (
                   <LineChart

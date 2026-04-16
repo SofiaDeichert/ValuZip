@@ -96,6 +96,8 @@ function median(values) {
   return sorted[mid];
 }
 
+const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4'];
+
 function getDefaultZipAnalytics(zip) {
   return {
     zip,
@@ -105,6 +107,7 @@ function getDefaultZipAnalytics(zip) {
     avgPricePerSqft: null,
     lastUpdated: '--/--/----',
     homePriceHistorical: [],
+    homePriceQuarterly: [],
     homePriceForecast: [],
     sqftHistorical: [],
     sqftForecast: [],
@@ -223,6 +226,47 @@ export async function getZipAnalytics(zip, options = {}) {
     }))
     .filter((d) => d.value > 0);
 
+  const quarterBuckets = new Map();
+  sliced.forEach((monthBucket) => {
+    const date = monthBucket.date;
+    if (!date) return;
+    const year = date.getUTCFullYear();
+    const quarter = Math.floor(date.getUTCMonth() / 3) + 1;
+    const quarterKey = `${year}-Q${quarter}`;
+    const existing = quarterBuckets.get(quarterKey) ?? {
+      year,
+      quarter,
+      values: [],
+    };
+    if (Array.isArray(monthBucket.zipMedianPrices) && monthBucket.zipMedianPrices.length) {
+      existing.values.push(...monthBucket.zipMedianPrices);
+    }
+    quarterBuckets.set(quarterKey, existing);
+  });
+
+  const quarterlyByYear = new Map();
+  [...quarterBuckets.values()]
+    .sort((a, b) =>
+      a.year === b.year ? a.quarter - b.quarter : a.year - b.year,
+    )
+    .forEach((q) => {
+      const value = Math.round(median(q.values) ?? 0);
+      if (value <= 0) return;
+      const byQuarter = quarterlyByYear.get(q.year) ?? {};
+      byQuarter[`Q${q.quarter}`] = value;
+      quarterlyByYear.set(q.year, byQuarter);
+    });
+
+  const homePriceQuarterly = [...quarterlyByYear.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([year, quarters]) => ({
+      year: String(year),
+      data: QUARTER_LABELS.map((quarterLabel) =>
+        Number.isFinite(quarters[quarterLabel]) ? quarters[quarterLabel] : null,
+      ),
+    }))
+    .filter((entry) => entry.data.some((v) => Number.isFinite(v)));
+
   const sqftHistorical = sliced
     .map((m) => ({
       date: formatMonthLabel(m.date),
@@ -238,6 +282,7 @@ export async function getZipAnalytics(zip, options = {}) {
     medianHomePrice: homePriceHistorical.at(-1)?.value ?? null,
     avgPricePerSqft: sqftHistorical.at(-1)?.value ?? null,
     homePriceHistorical,
+    homePriceQuarterly,
     homePriceForecast: [],
     sqftHistorical,
     sqftForecast: [],

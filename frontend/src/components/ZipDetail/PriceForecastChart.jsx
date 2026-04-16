@@ -94,7 +94,7 @@ export default function PriceForecastChart({
               type: 'line',
               data: [],
               connectNulls: false,
-              smooth: true,
+              smooth: false,
               symbol: 'none',
               lineStyle: { color, width: 2.5 },
               areaStyle: {
@@ -137,7 +137,12 @@ export default function PriceForecastChart({
     const historicalDates = historicalData.map((d) => d.date);
     const forecastDates = slicedForecast.map((d) => d.date);
     const allDates = [...historicalDates, ...forecastDates];
-    const bridgeIndex = historicalDates.length - 1;
+    const lastHistoricalIndex = historicalDates.length - 1;
+    const firstForecastIndex = historicalDates.length;
+    const firstForecastDate = forecastDates[0] ?? null;
+    const lastDate = allDates.at(-1) ?? null;
+    const lastHistoricalValue = historicalData.at(-1)?.value ?? null;
+    const firstForecastValue = slicedForecast[0]?.value ?? null;
 
     const actualData = [
       ...historicalData.map((d) => d.value),
@@ -145,10 +150,19 @@ export default function PriceForecastChart({
     ];
 
     const predictedData = [
-      ...historicalDates.slice(0, -1).map(() => null),
-      historicalData.at(-1)?.value ?? null,
+      ...historicalDates.map(() => null),
       ...slicedForecast.map((d) => d.value),
     ];
+
+    const transitionConnectorData = Array(allDates.length).fill(null);
+    if (
+      hasForecast &&
+      Number.isFinite(lastHistoricalValue) &&
+      Number.isFinite(firstForecastValue)
+    ) {
+      transitionConnectorData[lastHistoricalIndex] = lastHistoricalValue;
+      transitionConnectorData[firstForecastIndex] = firstForecastValue;
+    }
 
     instanceRef.current.setOption(
       {
@@ -168,17 +182,17 @@ export default function PriceForecastChart({
               if (p.value == null) return false;
               if (
                 hasForecast &&
-                p.seriesName === 'Actual' &&
-                p.dataIndex === bridgeIndex
+                p.seriesName === 'Historical' &&
+                p.dataIndex === lastHistoricalIndex
               )
                 return false;
               return true;
             });
             if (!visible.length) return '';
             const rows = visible.map((p) => {
-              const opacity = p.seriesName === 'Predicted' ? '0.6' : '1';
+              const opacity = p.seriesName === 'Forecast' ? '0.6' : '1';
               const dotColor =
-                p.seriesName === 'Predicted' ? lightColor : color;
+                p.seriesName === 'Forecast' ? lightColor : color;
               const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};opacity:${opacity};margin-right:6px;"></span>`;
               return `${dot}<b>${p.seriesName}</b>: ${fmtTooltip(p.value)}`;
             });
@@ -219,11 +233,11 @@ export default function PriceForecastChart({
         },
         series: [
           {
-            name: 'Actual',
+            name: 'Historical',
             type: 'line',
             data: actualData,
             connectNulls: false,
-            smooth: true,
+            smooth: false,
             symbol: 'none',
             lineStyle: { color, width: 2.5, type: 'solid' },
             areaStyle: {
@@ -232,11 +246,25 @@ export default function PriceForecastChart({
                 { offset: 1, color: color + '00' },
               ]),
             },
+            markPoint:
+              hasForecast && Number.isFinite(lastHistoricalValue)
+                ? {
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    silent: true,
+                    tooltip: { show: false },
+                    itemStyle: {
+                      color,
+                      opacity: 0.45,
+                    },
+                    data: [{ coord: [historicalDates.at(-1), lastHistoricalValue] }],
+                  }
+                : undefined,
           },
           ...(hasForecast
             ? [
                 {
-                  name: 'Predicted',
+                  name: 'Forecast',
                   type: 'line',
                   data: predictedData,
                   connectNulls: false,
@@ -254,6 +282,64 @@ export default function PriceForecastChart({
                       { offset: 1, color: lightColor + '00' },
                     ]),
                   },
+                  markLine: firstForecastDate
+                    ? {
+                        symbol: 'none',
+                        silent: true,
+                        lineStyle: {
+                          color: '#9ca3af',
+                          width: 1.5,
+                          type: 'solid',
+                          opacity: 0.9,
+                        },
+                        label: {
+                          show: true,
+                          formatter: 'Forecast begins',
+                          color: '#4b5563',
+                          backgroundColor: '#fffffff0',
+                          borderColor: '#e5e7eb',
+                          borderWidth: 1,
+                          borderRadius: 4,
+                          padding: [3, 6],
+                          fontSize: 11,
+                          fontWeight: 600,
+                          position: 'insideEndTop',
+                        },
+                        data: [{ xAxis: firstForecastDate }],
+                      }
+                    : undefined,
+                  markArea:
+                    firstForecastDate && lastDate
+                      ? {
+                          silent: true,
+                          itemStyle: {
+                            color: '#9ca3af22',
+                          },
+                          data: [
+                            [
+                              { xAxis: firstForecastDate },
+                              { xAxis: lastDate },
+                            ],
+                          ],
+                        }
+                      : undefined,
+                },
+                {
+                  name: 'Transition',
+                  type: 'line',
+                  data: transitionConnectorData,
+                  connectNulls: false,
+                  smooth: false,
+                  symbol: 'none',
+                  silent: true,
+                  tooltip: { show: false },
+                  lineStyle: {
+                    color: '#9ca3af',
+                    width: 2,
+                    type: 'dashed',
+                    opacity: 0.7,
+                  },
+                  z: 2,
                 },
               ]
             : []),
@@ -309,7 +395,7 @@ export default function PriceForecastChart({
       <div className="flex items-center gap-4 mb-2">
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-0.5 rounded" style={{ background: color }} />
-          <span className="text-sm text-gray-400">Actual</span>
+          <span className="text-sm text-gray-400">Historical</span>
         </div>
         {hasForecast && (
           <div className="flex items-center gap-1.5">
@@ -320,7 +406,7 @@ export default function PriceForecastChart({
                 opacity: 0.65,
               }}
             />
-            <span className="text-sm text-gray-400">Predicted</span>
+            <span className="text-sm text-gray-400">Forecast</span>
           </div>
         )}
       </div>
