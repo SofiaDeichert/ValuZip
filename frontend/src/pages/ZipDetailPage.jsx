@@ -318,6 +318,8 @@ const ChartCard = memo(function ChartCard({
   headerRight,
   value,
   valueLabel,
+  statusNote,
+  statusNoteTone = 'info',
   historicalData,
   forecastData: fcData,
   color,
@@ -412,6 +414,16 @@ const ChartCard = memo(function ChartCard({
         height={isModal ? 320 : 220}
       />
 
+      {statusNote && (
+        <p
+          className={`mt-3 text-xs leading-snug ${
+            statusNoteTone === 'warning' ? 'text-amber-700' : 'text-gray-500'
+          }`}
+        >
+          {statusNote}
+        </p>
+      )}
+
       {/* Toggles — bottom */}
       {!isModal && headerRight && (
         <div className="mt-4 flex items-center">{headerRight}</div>
@@ -471,6 +483,11 @@ export default function ZipDetailPage() {
   const prevPropertyHistorical = useRef([]);
   // Property sale data from CSV + forecast from backend
   const [propertyHistorical, setPropertyHistorical] = useState([]);
+  const [propertyHistoryMeta, setPropertyHistoryMeta] = useState({
+    limitedData: false,
+    matchLevel: 'strict',
+    matchedSales: 0,
+  });
   const [forecastData, setForecastData] = useState([]);
   const [forecastLoading, setForecastLoading] = useState(false);
 
@@ -563,6 +580,11 @@ export default function ZipDetailPage() {
   useEffect(() => {
     if (!hasPrediction) {
       setPropertyHistorical([]);
+      setPropertyHistoryMeta({
+        limitedData: false,
+        matchLevel: 'strict',
+        matchedSales: 0,
+      });
       return;
     }
     let alive = true;
@@ -573,11 +595,19 @@ export default function ZipDetailPage() {
       .then((r) => r.json())
       .then((data) => {
         if (!alive) return;
-        const hist = data.history || [];
+        const hist = Array.isArray(data.history) ? data.history : [];
+        const limitedData = Boolean(data.limited_data);
+        const matchLevel = data.match_level || 'none';
+        const matchedSales = Number.isFinite(data.matched_sales)
+          ? data.matched_sales
+          : 0;
+        setPropertyHistoryMeta({
+          limitedData,
+          matchLevel,
+          matchedSales,
+        });
         if (hist.length) prevPropertyHistorical.current = hist;
-        setPropertyHistorical(
-          hist.length ? hist : prevPropertyHistorical.current,
-        );
+        setPropertyHistorical(hist.length ? hist : limitedData ? [] : prevPropertyHistorical.current);
       })
       .catch(() => {
         if (alive) setPropertyHistorical(prevPropertyHistorical.current);
@@ -702,6 +732,26 @@ export default function ZipDetailPage() {
 
   const marketLatestPrice = marketAnalytics.historical.at(-1)?.value ?? null;
   const propertyLatestPrice = hasPrediction ? prediction.predictedPrice : null;
+  const propertyHistoryStatusNote =
+    hasPrediction &&
+    propertyHistoryMeta.limitedData &&
+    propertyHistorical.length === 0
+      ? 'Not enough historical comparable sales found for this property.'
+      : hasPrediction &&
+          propertyHistorical.length > 0 &&
+          propertyHistoryMeta.matchLevel === 'strict'
+        ? 'Based on recent comparable sales for similar homes in this area.'
+        : hasPrediction &&
+            propertyHistorical.length > 0 &&
+            propertyHistoryMeta.matchLevel !== 'strict'
+          ? 'Based on a broader set of comparable homes due to limited exact matches.'
+          : null;
+  const propertyHistoryStatusTone =
+    hasPrediction &&
+    propertyHistoryMeta.limitedData &&
+    propertyHistorical.length === 0
+      ? 'warning'
+      : 'info';
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden bg-gray-100">
@@ -880,7 +930,6 @@ export default function ZipDetailPage() {
                 iconBg="bg-violet-50"
                 title="Your Property Estimate"
                 subtitle="Historical sales for matching properties + ML model forecast"
-                histNote="Historical shows median sale price for same beds/baths within ±15% of the inputted sqft"
                 headerRight={
                   <div
                     className="flex flex-row items-center gap-6"
@@ -904,6 +953,8 @@ export default function ZipDetailPage() {
                 }
                 value={formatPrice(propertyLatestPrice)}
                 valueLabel="ML price estimate for your inputs"
+                statusNote={propertyHistoryStatusNote}
+                statusNoteTone={propertyHistoryStatusTone}
                 historicalData={propertyHistorical}
                 forecastData={slicedForecast}
                 color="#7c3aed"

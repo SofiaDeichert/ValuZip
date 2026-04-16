@@ -68,15 +68,22 @@ def property_history(
     years: int = Query(3),
 ):
     """
-    Returns historical monthly median sale prices from the CSV
-    filtered to zip + beds + baths + sqft ±15%.
-    Each point: { date: 'MMM YYYY', value: float }
+    Returns historical monthly median sale prices from the CSV with a
+    tiered fallback strategy based on matched sales.
+
+    Response shape:
+    {
+        "history": [...],
+        "limited_data": bool,
+        "match_level": "strict" | "expanded_sqft" | "expanded_baths" | "none",
+        "matched_sales": int,
+    }
     """
     try:
-        history = get_property_history(zip_code, beds, baths, years, sqft)
+        result = get_property_history(zip_code, beds, baths, years, sqft)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    return {"history": history}
+    return result
 
 
 @app.get("/predictions")
