@@ -41,18 +41,6 @@ function formatPrice(val) {
   return `$${val}`;
 }
 
-/**
- * Given a history array of { date: 'Mon YYYY', value } points, returns how
- * many years of data are actually covered (oldest point → today).
- */
-function getHistorySpanYears(history) {
-  if (!history || history.length === 0) return 0;
-  const oldest = history[0].date; // e.g. 'Jan 2019'
-  const parsed = new Date(oldest);
-  if (isNaN(parsed)) return 0;
-  return (Date.now() - parsed.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-}
-
 // ── Toggle component ────────────────────────────────────────────────────────
 function Toggle({ options, value, onChange, label, insufficientYears }) {
   return (
@@ -62,7 +50,7 @@ function Toggle({ options, value, onChange, label, insufficientYears }) {
       onKeyDown={(e) => e.stopPropagation()}
     >
       {label && (
-        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">
+        <span className="text-[12px] font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap mr-1">
           {label}
         </span>
       )}
@@ -126,6 +114,7 @@ const LineChart = memo(function LineChart({
   yFormatter,
   tooltipFormatter,
   height = 220,
+  extraTopPadding = false,
 }) {
   const ref = useRef(null);
   const inst = useRef(null);
@@ -153,9 +142,6 @@ const LineChart = memo(function LineChart({
       ...fcDates.map(() => null),
     ];
 
-    // When there IS history: pad nulls so forecast starts at the last
-    // historical point (bridge), creating a visual handoff.
-    // When there is NO history: start the forecast at index 0 — no gap.
     const forecastSeries = hasForecast
       ? hasHistory
         ? [
@@ -166,13 +152,42 @@ const LineChart = memo(function LineChart({
         : forecastData.map((d) => d.value)
       : [];
 
+    // Compute tight y-axis bounds with evenly spaced ticks that stay
+    // consistent when toggles change
+    const allValues = [
+      ...historicalData.map((d) => d.value),
+      ...forecastData.map((d) => d.value),
+    ].filter(Number.isFinite);
+
+    // No data yet — clear chart and show nothing (avoids float garbage on load)
+    if (!allValues.length) {
+      inst.current.clear();
+      return;
+    }
+
+    const dataMin = Math.min(...allValues);
+    const dataMax = Math.max(...allValues);
+    const dataPad = Math.max((dataMax - dataMin) * 0.08, dataMax * 0.01);
+    const rawMin = dataMin - dataPad;
+    const rawMax = dataMax + dataPad;
+    const rawRange = rawMax - rawMin;
+    // Pick a clean interval that divides into exactly 5 ticks
+    const roughInterval = rawRange / 5;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughInterval)));
+    const niceInterval = Math.ceil(roughInterval / magnitude) * magnitude;
+    // Snap min to exact multiple of the interval
+    const yMin = Math.floor(rawMin / niceInterval) * niceInterval;
+    // Ensure yMax is always at least one full interval above dataMax so the
+    // area-fill gradient is never clipped at the top of the plot boundary
+    const yMax = yMin + niceInterval * (extraTopPadding ? 6 : 5);
+
     inst.current.setOption(
       {
         animation: true,
         animationDuration: 500,
         animationEasing: 'cubicInOut',
         backgroundColor: 'transparent',
-        grid: { top: 16, right: 16, bottom: 48, left: 44, containLabel: true },
+        grid: { top: 24, right: 24, bottom: 24, left: 24, containLabel: true },
         tooltip: {
           trigger: 'axis',
           backgroundColor: '#fff',
@@ -206,14 +221,24 @@ const LineChart = memo(function LineChart({
           axisLine: { lineStyle: { color: '#e5e7eb' } },
           axisTick: { show: false },
           axisLabel: {
-            fontSize: 11,
+            fontSize: 12,
             color: '#9ca3af',
             interval: Math.max(0, Math.floor(allDates.length / 5) - 1),
+            margin: 16,
           },
         },
         yAxis: {
           type: 'value',
-          axisLabel: { fontSize: 11, color: '#9ca3af', formatter: yFormatter },
+          min: yMin,
+          max: yMax,
+          splitNumber: 5,
+          interval: niceInterval,
+          axisLabel: {
+            fontSize: 12,
+            color: '#9ca3af',
+            formatter: yFormatter,
+            margin: 16,
+          },
           splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
           axisLine: { show: false },
           axisTick: { show: false },
@@ -281,10 +306,12 @@ const LineChart = memo(function LineChart({
   return (
     <div className="w-full">
       <div className="flex items-center gap-4 mb-2">
-        <div className="flex items-center gap-1.5">
-          <div className="w-5 h-0.5 rounded" style={{ background: color }} />
-          <span className="text-xs text-gray-400">Historical</span>
-        </div>
+        {historicalData.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <div className="w-5 h-0.5 rounded" style={{ background: color }} />
+            <span className="mt-2 text-sm text-gray-400">Historical</span>
+          </div>
+        )}
         {hasForecast && (
           <div className="flex items-center gap-1.5">
             <div
@@ -294,7 +321,7 @@ const LineChart = memo(function LineChart({
                 opacity: 0.7,
               }}
             />
-            <span className="text-xs text-gray-400">ML Forecast</span>
+            <span className="mt-2 text-sm text-gray-400">ML Forecast</span>
           </div>
         )}
       </div>
@@ -322,6 +349,7 @@ const ChartCard = memo(function ChartCard({
   forecastData: fcData,
   color,
   forecastColor,
+  extraTopPadding = false,
   isModal = false,
   onExpand,
 }) {
@@ -331,22 +359,22 @@ const ChartCard = memo(function ChartCard({
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <div
-            className={`w-9 h-9 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}
+            className={`w-12 h-12 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0 mr-2.5`}
           >
             {icon}
           </div>
           <div className="min-w-0">
-            <span className="text-sm font-bold text-gray-700 tracking-tight">
+            <span className="text-lg font-bold text-gray-700 tracking-tight">
               {title}
             </span>
-            <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
+            <p className="text-sm text-gray-400 mt-0.5">{subtitle}</p>
           </div>
         </div>
         {!isModal && onExpand && (
           <button
             type="button"
             onClick={() => onExpand(chartKey)}
-            className="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-200/70 hover:bg-gray-300/80 flex items-center justify-center transition-colors"
+            className="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-200/70 hover:bg-gray-300/80 flex items-center justify-center transition-colors"
             aria-label="Expand chart"
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -399,7 +427,7 @@ const ChartCard = memo(function ChartCard({
       <div className="mb-1">
         <span className="text-3xl font-bold text-gray-900">{value}</span>
       </div>
-      {valueLabel && <p className="text-xs text-gray-400 mb-4">{valueLabel}</p>}
+      {valueLabel && <p className="text-sm text-gray-400 mb-4">{valueLabel}</p>}
 
       {/* Chart */}
       <LineChart
@@ -410,6 +438,7 @@ const ChartCard = memo(function ChartCard({
         yFormatter={priceTick}
         tooltipFormatter={priceTooltip}
         height={isModal ? 320 : 220}
+        extraTopPadding={extraTopPadding}
       />
 
       {/* Toggles — bottom */}
@@ -448,9 +477,6 @@ export default function ZipDetailPage() {
   const [marketHistoryYears, setMarketHistoryYears] = useState(
     DEFAULT_HISTORY_YEARS,
   );
-  const [propertyHistoryYears, setPropertyHistoryYears] = useState(
-    DEFAULT_HISTORY_YEARS,
-  );
   const [forecastYears, setForecastYears] = useState(DEFAULT_FORECAST_YEARS);
 
   // City/state loaded once on zip change — independent of history toggles
@@ -466,18 +492,11 @@ export default function ZipDetailPage() {
     historical: [],
   });
 
-  // Holds last-good data so charts never receive [] while a fetch is in-flight
+  // Holds last-good data so market chart never receives [] while a fetch is in-flight
   const prevMarketHistorical = useRef([]);
-  const prevPropertyHistorical = useRef([]);
-  // Property sale data from CSV + forecast from backend
-  const [propertyHistorical, setPropertyHistorical] = useState([]);
+  // Forecast from backend
   const [forecastData, setForecastData] = useState([]);
   const [forecastLoading, setForecastLoading] = useState(false);
-
-  // Oldest data point span in years from the 10yr probe fetch.
-  // null = still loading. Used to disable history toggles that exceed available data.
-  const [propertyHistorySpanYears, setPropertyHistorySpanYears] =
-    useState(null);
 
   // Modal keyboard / scroll lock
   useEffect(() => {
@@ -556,61 +575,6 @@ export default function ZipDetailPage() {
       alive = false;
     };
   }, [zip, marketHistoryYears]);
-
-  // Property historical — load from backend filtered by zip+beds+baths+sqft±15%
-  // Note: we do NOT clear propertyHistorical before the fetch resolves so the
-  // chart keeps showing the previous data (no empty-array flash) during load.
-  useEffect(() => {
-    if (!hasPrediction) {
-      setPropertyHistorical([]);
-      return;
-    }
-    let alive = true;
-    const { beds, baths, sqft } = prediction;
-    fetch(
-      `http://127.0.0.1:8000/property-history?zip_code=${zip}&beds=${beds}&baths=${baths}&sqft=${sqft}&years=${propertyHistoryYears}`,
-    )
-      .then((r) => r.json())
-      .then((data) => {
-        if (!alive) return;
-        const hist = data.history || [];
-        if (hist.length) prevPropertyHistorical.current = hist;
-        setPropertyHistorical(
-          hist.length ? hist : prevPropertyHistorical.current,
-        );
-      })
-      .catch(() => {
-        if (alive) setPropertyHistorical(prevPropertyHistorical.current);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [zip, prediction, propertyHistoryYears, hasPrediction]);
-
-  // Fetch the widest window once to find the oldest data point.
-  // spanYears = how far back the data actually goes → disables toggles beyond that.
-  useEffect(() => {
-    if (!hasPrediction) {
-      setPropertyHistorySpanYears(null);
-      return;
-    }
-    let alive = true;
-    const { beds, baths, sqft } = prediction;
-    fetch(
-      `http://127.0.0.1:8000/property-history?zip_code=${zip}&beds=${beds}&baths=${baths}&sqft=${sqft}&years=10`,
-    )
-      .then((r) => r.json())
-      .then((data) => {
-        if (!alive) return;
-        setPropertyHistorySpanYears(getHistorySpanYears(data.history || []));
-      })
-      .catch(() => {
-        if (alive) setPropertyHistorySpanYears(0);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [zip, prediction, hasPrediction]);
 
   // Forecast — fetch from backend when prediction available
   useEffect(() => {
@@ -701,7 +665,9 @@ export default function ZipDetailPage() {
   const handleExpand = useCallback((key) => setActiveModal(key), []);
 
   const marketLatestPrice = marketAnalytics.historical.at(-1)?.value ?? null;
-  const propertyLatestPrice = hasPrediction ? prediction.predictedPrice : null;
+  const propertyLatestPrice = hasPrediction
+    ? (slicedForecast.at(-1)?.value ?? null)
+    : null;
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden bg-gray-100">
@@ -824,7 +790,7 @@ export default function ZipDetailPage() {
               onExpand={handleExpand}
               specPills={[]}
               icon={
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <svg className="w-5 h-5" viewBox="0 0 16 16" fill="none">
                   <path
                     d="M1 6.5L8 1L15 6.5V15H10V10H6V15H1V6.5Z"
                     stroke="#006400"
@@ -849,6 +815,7 @@ export default function ZipDetailPage() {
               historicalData={marketAnalytics.historical}
               forecastData={[]}
               color="#006400"
+              extraTopPadding={true}
             />
 
             {/* ── Chart 2: Your Property Estimate ── */}
@@ -858,7 +825,7 @@ export default function ZipDetailPage() {
                 onExpand={handleExpand}
                 specPills={specPills}
                 icon={
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <svg className="w-5 h-5" viewBox="0 0 16 16" fill="none">
                     <rect
                       x="1"
                       y="1"
@@ -879,21 +846,13 @@ export default function ZipDetailPage() {
                 }
                 iconBg="bg-violet-50"
                 title="Your Property Estimate"
-                subtitle="Historical sales for matching properties + ML model forecast"
-                histNote="Historical shows median sale price for same beds/baths within ±15% of the inputted sqft"
+                subtitle="ML model forecast"
+                histNote={null}
                 headerRight={
                   <div
                     className="flex flex-row items-center gap-6"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Toggle
-                      options={HISTORY_OPTIONS}
-                      value={propertyHistoryYears}
-                      onChange={setPropertyHistoryYears}
-                      label="History"
-                      insufficientYears={propertyHistorySpanYears}
-                    />
-                    <div className="w-px h-4 bg-gray-200" />
                     <Toggle
                       options={FORECAST_OPTIONS}
                       value={forecastYears}
@@ -904,7 +863,7 @@ export default function ZipDetailPage() {
                 }
                 value={formatPrice(propertyLatestPrice)}
                 valueLabel="ML price estimate for your inputs"
-                historicalData={propertyHistorical}
+                historicalData={[]}
                 forecastData={slicedForecast}
                 color="#7c3aed"
                 forecastColor="#a78bfa"
@@ -982,13 +941,6 @@ export default function ZipDetailPage() {
                   {activeModal === 'property' && (
                     <div className="flex items-center gap-3">
                       <Toggle
-                        options={HISTORY_OPTIONS}
-                        value={propertyHistoryYears}
-                        onChange={setPropertyHistoryYears}
-                        label="History"
-                        insufficientYears={propertyHistorySpanYears}
-                      />
-                      <Toggle
                         options={FORECAST_OPTIONS}
                         value={forecastYears}
                         onChange={setForecastYears}
@@ -1026,7 +978,7 @@ export default function ZipDetailPage() {
                 )}
                 {activeModal === 'property' && hasPrediction && (
                   <LineChart
-                    historicalData={propertyHistorical}
+                    historicalData={[]}
                     forecastData={slicedForecast}
                     color="#7c3aed"
                     forecastColor="#a78bfa"
