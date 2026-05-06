@@ -1,15 +1,18 @@
 import { Marker } from 'react-map-gl/mapbox';
 import { useNavigate } from 'react-router-dom';
 import centroid from '@turf/centroid';
+import DATASET_ZIPS from '../../utils/datasetZips';
 
 export default function ZipMarkers({ geojson, excludeZip }) {
   const navigate = useNavigate();
 
-  const features = excludeZip
-    ? geojson.features.filter(
-        (f) => String(f.properties.ZipCode) !== String(excludeZip),
-      )
-    : geojson.features;
+  const features = geojson.features.filter((f) => {
+    const zip = Number(f.properties.ZipCode);
+    if (!DATASET_ZIPS.has(zip)) return false;
+    if (excludeZip && String(f.properties.ZipCode) === String(excludeZip))
+      return false;
+    return true;
+  });
 
   return features.map((feature) => {
     const zip = feature.properties.ZipCode;

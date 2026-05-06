@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import geojsonUrl from '../data/dallas-zips.geojson?url';
+import DATASET_ZIPS from '../utils/datasetZips';
 
 export default function ZipSelect({ currentZip, className = '', style = {} }) {
   const navigate = useNavigate();
@@ -12,13 +13,14 @@ export default function ZipSelect({ currentZip, className = '', style = {} }) {
   const menuRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Fetch + cache ZIP list once
+  // Fetch + cache ZIP list once, filtered to only ZIPs with dataset data
   useEffect(() => {
     fetch(geojsonUrl)
       .then((r) => r.json())
       .then((data) => {
         const zips = data.features
           .map((f) => String(f.properties.ZipCode))
+          .filter((z) => DATASET_ZIPS.has(Number(z)))
           .sort();
         setZipCodes(zips);
       });
@@ -226,7 +228,9 @@ export default function ZipSelect({ currentZip, className = '', style = {} }) {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       backgroundColor:
-                        isHovered || isCurrent ? 'rgba(0,100,0,0.08)' : 'transparent',
+                        isHovered || isCurrent
+                          ? 'rgba(0,100,0,0.08)'
+                          : 'transparent',
                       color: isCurrent ? '#006400' : '#111827',
                       transition: 'background 0.08s',
                     }}
