@@ -870,7 +870,7 @@ export default function ZipDetailPage() {
               />
             ) : (
               /* Shown when user browsed directly to a ZIP (no prediction) */
-              <div className="bg-gray-50 rounded-xl p-5 border border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-center min-h-[140px]">
+              <div className="bg-gray-50 rounded-xl p-5 border border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-center min-h-[485px]">
                 <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                   <path
                     d="M4 11L14 3L24 11V25H18V17H10V25H4V11Z"

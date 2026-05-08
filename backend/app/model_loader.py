@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 # PKL HERE
-MODEL_PATH = Path(__file__).resolve().parent.parent / "data" / "prophet_texas_forecast_model.pkl"
+MODEL_PATH = Path(__file__).resolve().parent.parent / "data" / "prophet_texas_forecast_model_fixed.pkl"
 
 _model = None
 
@@ -57,7 +57,7 @@ def predict_price(data) -> float:
     if zip_code not in get_valid_zip_codes():
         raise ValueError(
             f"ZIP code '{zip_code}' is not in the model's training data. "
-            "Please use a valid Texas ZIP code."
+            "Please use a valid Dallas ZIP code."
         )
 
     # Use the 1st of the given month as the target date
